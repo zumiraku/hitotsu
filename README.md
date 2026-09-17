@@ -34,6 +34,18 @@ npm run dev
 
 http://localhost:3000 で開く。DB 接続の確認は http://localhost:3000/api/health 。
 
+seed 投入後は次のアカウントでログインできます（パスワードはすべて `password`）。
+
+| メール | 名前 | ロール |
+| --- | --- | --- |
+| sato@example.com | 佐藤 健太 | 管理者 |
+| takahashi@example.com | 高橋 美咲 | マネージャー |
+| tanaka@example.com | 田中 大輔 | 一般 |
+| suzuki@example.com | 鈴木 あかね | 一般 |
+| yamamoto@example.com | 山本 拓也 | 閲覧のみ |
+
+本番ではこれらを削除し、「ユーザー・権限」画面から実際のユーザーを招待してください。
+
 ## よく使うコマンド
 
 | コマンド | 内容 |
@@ -46,6 +58,13 @@ http://localhost:3000 で開く。DB 接続の確認は http://localhost:3000/ap
 | `npm run db:seed` | サンプルデータ投入（既存データは消える） |
 | `npm run db:reset` | DB を作り直してマイグレーションと seed をやり直す |
 | `npm run db:studio` | Prisma Studio で DB を見る |
+
+## 認証と権限
+
+- Cookie セッション（30日、HttpOnly）。パスワードは bcrypt でハッシュ化
+- ロールは 管理者／マネージャー／一般／閲覧のみ の4つ。できることの一覧は「ユーザー・権限」画面に表示
+- 権限は画面の表示だけでなく、すべての Server Action と API で確認している
+- 招待時は仮パスワードを発行し、初回ログインで変更を求める。メールは送信しない
 
 ## ファイルの保存先
 
