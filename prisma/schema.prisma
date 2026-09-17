@@ -1,0 +1,262 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum CustomerType {
+  CUSTOMER
+  PARTNER
+  BOTH
+}
+
+enum ProjectStatus {
+  LEAD
+  ACTIVE
+  HOLD
+  DONE
+  LOST
+}
+
+enum Priority {
+  HIGH
+  MID
+  LOW
+}
+
+enum ActivityType {
+  CALL
+  MAIL
+  VISIT
+  MEETING
+  MEMO
+}
+
+enum NoteCategory {
+  MEMO
+  HANDOVER
+  RULE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS
+  ROLE
+  IMPORT
+  EXPORT
+  LOGIN
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(MEMBER)
+  department   String?
+  color        String    @default("#1E5B85")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  ownedCustomers Customer[]      @relation("CustomerOwner")
+  ownedProjects  Project[]       @relation("ProjectOwner")
+  memberships    ProjectMember[]
+  tasks          Task[]          @relation("TaskAssignee")
+  createdTasks   Task[]          @relation("TaskCreator")
+  activities     Activity[]
+  notes          Note[]
+  files          File[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+model Customer {
+  id           String       @id @default(cuid())
+  code         String       @unique
+  name         String
+  kana         String?
+  type         CustomerType @default(CUSTOMER)
+  industry     String?
+  contactName  String?
+  contactTitle String?
+  tel          String?
+  email        String?
+  address      String?
+  note         String?
+  tags         String[]     @default([])
+  ownerId      String?
+  owner        User?        @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  deletedAt    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  projects   Project[]
+  activities Activity[]
+  notes      Note[]
+  files      File[]
+
+  @@index([name])
+  @@index([kana])
+  @@index([ownerId])
+  @@index([deletedAt])
+  @@map("customers")
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  code       String        @unique
+  name       String
+  customerId String
+  customer   Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  status     ProjectStatus @default(LEAD)
+  priority   Priority      @default(MID)
+  ownerId    String?
+  owner      User?         @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  amount     Int           @default(0)
+  startDate  DateTime?     @db.Date
+  dueDate    DateTime?     @db.Date
+  summary    String?
+  tags       String[]      @default([])
+  deletedAt  DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  members    ProjectMember[]
+  tasks      Task[]
+  activities Activity[]
+  notes      Note[]
+  files      File[]
+
+  @@index([customerId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+model ProjectMember {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById String?
+  createdBy   User?     @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  dueDate     DateTime? @db.Date
+  done        Boolean   @default(false)
+  doneAt      DateTime?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([dueDate])
+  @@index([done])
+  @@map("tasks")
+}
+
+model Activity {
+  id         String       @id @default(cuid())
+  projectId  String?
+  project    Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customerId String?
+  customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type       ActivityType @default(MEMO)
+  body       String
+  occurredAt DateTime     @default(now())
+  createdAt  DateTime     @default(now())
+
+  @@index([projectId, occurredAt])
+  @@index([customerId, occurredAt])
+  @@index([occurredAt])
+  @@map("activities")
+}
+
+model Note {
+  id         String       @id @default(cuid())
+  title      String
+  category   NoteCategory @default(MEMO)
+  body       String
+  pinned     Boolean      @default(false)
+  projectId  String?
+  project    Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  customerId String?
+  customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  authorId   String?
+  author     User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([pinned])
+  @@map("notes")
+}
+
+model File {
+  id          String    @id @default(cuid())
+  name        String
+  size        Int       @default(0)
+  mimeType    String?
+  version     Int       @default(1)
+  storagePath String
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  uploaderId  String?
+  uploader    User?     @relation(fields: [uploaderId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  @@index([projectId])
+  @@index([customerId])
+  @@index([name])
+  @@map("files")
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      AuditAction
+  targetType  String
+  targetId    String?
+  targetLabel String
+  changes     Json?
+  createdAt   DateTime    @default(now())
+
+  @@index([targetType, targetId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
