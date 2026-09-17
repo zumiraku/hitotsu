@@ -6,6 +6,8 @@ import { TaskRow } from "@/components/tasks/task-row";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/badge";
 import { activityOptions } from "@/lib/activity-options";
+import { aiEnabled } from "@/lib/ai/provider";
+import { dailySummary } from "@/lib/ai/summary";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday, toInputDate } from "@/lib/format";
@@ -39,7 +41,7 @@ export default async function DashboardPage() {
   const utc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const liveTask = { OR: [{ projectId: null }, { project: { deletedAt: null } }] };
 
-  const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users, actOptions, pinnedNotes] = await Promise.all([
+  const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users, actOptions, pinnedNotes, summary] = await Promise.all([
     db.project.findMany({
       where: { deletedAt: null, status: { in: ["ACTIVE", "HOLD", "LEAD"] } },
       include: {
@@ -62,6 +64,7 @@ export default async function DashboardPage() {
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true, color: true }, orderBy: { name: "asc" } }),
     activityOptions(),
     db.note.findMany({ where: { pinned: true }, include: { author: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
+    dailySummary(me.id),
   ]);
 
   const active = projects.filter((p) => p.status === "ACTIVE");
@@ -111,6 +114,11 @@ export default async function DashboardPage() {
           {can(me, "edit") ? <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link> : null}
           {can(me, "activity") ? <AddActivityButton options={actOptions} /> : null}
         </div>
+      </div>
+
+      <div className="mb-3.5 flex items-start gap-2.5 rounded-[7px] bg-violet-soft px-3 py-2.5 text-[13px] text-violet">
+        <Icon name="spark" size={16} className="mt-0.5 shrink-0" />
+        <div><b>今日のまとめ</b>　{summary}</div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -278,10 +286,9 @@ export default async function DashboardPage() {
             </section>
           ) : null}
 
-          <div className="flex items-start gap-2.5 rounded-[7px] bg-violet-soft px-3 py-2.5 text-[13px] text-violet">
-            <Icon name="spark" size={16} className="mt-0.5 shrink-0" />
-            <div><b>AIアシスト</b>はステージ9で有効化します。引き継ぎメモの下書きや自然言語での検索を、効果の見えた箇所から入れていきます。</div>
-          </div>
+          <p className="text-[12px] text-muted">
+            AI アシスト：{aiEnabled() ? "有効（引き継ぎメモの文章整形と検索の解釈に使用）" : "ルールベースで動作中。API キーを設定すると文章整形と検索の解釈が有効になります"}
+          </p>
         </div>
       </div>
     </div>
