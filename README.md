@@ -46,6 +46,29 @@ seed 投入後は次のアカウントでログインできます（パスワー
 
 本番ではこれらを削除し、「ユーザー・権限」画面から実際のユーザーを招待してください。
 
+## テスト
+
+```bash
+# 初回のみ: テスト用 DB を作る
+psql -U postgres -c "CREATE DATABASE hitotsu_test ENCODING 'UTF8' TEMPLATE template0;"
+cp .env.test.example .env.test
+npm run test:db      # マイグレーションと seed
+
+npm test             # 単体 + 統合（Server Action と権限）。実行のたびにテスト DB を seed に戻す
+npm run test:unit    # 単体だけ（DB 不要）
+npm run test:e2e     # 起動中のアプリに対する画面の通し確認（BASE_URL、ローカルの Chrome が必要）
+```
+
+## 本番で動かす
+
+Docker Compose で DB・アプリ・マイグレーションをまとめて起動できる。手順は [docs/デプロイ手順.md](docs/デプロイ手順.md)、日々の運用は [docs/運用マニュアル.md](docs/運用マニュアル.md)。
+
+```bash
+cp .env.docker.example .env   # DB_PASSWORD を設定
+docker compose up -d --build
+docker compose run --rm migrate npx tsx scripts/create-admin.ts admin@example.co.jp "管理者 太郎" "仮パスワード"
+```
+
 ## よく使うコマンド
 
 | コマンド | 内容 |
@@ -58,6 +81,9 @@ seed 投入後は次のアカウントでログインできます（パスワー
 | `npm run db:seed` | サンプルデータ投入（既存データは消える） |
 | `npm run db:reset` | DB を作り直してマイグレーションと seed をやり直す |
 | `npm run db:studio` | Prisma Studio で DB を見る |
+| `npm test` | テスト（単体 + 統合） |
+| `npx tsx scripts/create-admin.ts` | 最初の管理者を作る |
+| `scripts/backup.sh` / `scripts/restore.sh` | バックアップと復元（Docker 環境） |
 
 ## 認証と権限
 
@@ -107,7 +133,9 @@ src/app/         画面（App Router）と API
 src/components/  共通 UI
 src/lib/         DB クライアント、ラベル、日付などのユーティリティ
 src/generated/   Prisma Client の生成物（コミットしない）
-docs/            開発計画などのドキュメント
+docs/            開発計画・デプロイ手順・運用マニュアル
+scripts/         管理者作成、バックアップ・復元
+tests/           単体・統合・画面テスト
 storage/         アップロードされたファイルの本体（コミットしない）
 ```
 
