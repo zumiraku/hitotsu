@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.tmp
+storage
+storage-test
+.env
+.env.test
+*.log
+tests
+docs
+README.md
