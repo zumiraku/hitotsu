@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -198,11 +200,18 @@ async function main() {
     ["発注書_フジ倉庫_ラベル2000枚.pdf", 90112, 1, "p10", "c3", "suzuki", -1],
     ["会社ロゴ_サクラ物産.ai", 1887436, 1, null, "c1", "tanaka", -50],
   ] as const;
+  // ダウンロードが動くように、中身はダミーのテキストで実ファイルも置いておく
+  const storageDir = process.env.STORAGE_DIR || path.join(process.cwd(), "storage");
+  await mkdir(path.join(storageDir, "seed"), { recursive: true });
   for (const [name, size, version, proj, cust, uploader, d] of fileRows) {
+    const storagePath = `seed/v${version}_${name}`;
+    await writeFile(path.join(storageDir, storagePath), `サンプルファイル: ${name}（v${version}）
+実際の運用ではここにアップロードされた本体が入ります。
+`);
     await db.file.create({
       data: {
         name, size, version,
-        storagePath: `seed/${name}`,
+        storagePath,
         projectId: proj ? projects[proj].id : null,
         customerId: customers[cust].id,
         uploaderId: users[uploader].id,

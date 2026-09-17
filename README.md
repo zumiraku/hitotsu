@@ -47,6 +47,22 @@ http://localhost:3000 で開く。DB 接続の確認は http://localhost:3000/ap
 | `npm run db:reset` | DB を作り直してマイグレーションと seed をやり直す |
 | `npm run db:studio` | Prisma Studio で DB を見る |
 
+## ファイルの保存先
+
+アップロードされたファイルの本体は既定でプロジェクト直下の `storage/`（git 管理外）に保存されます。
+S3 互換ストレージ（AWS S3、MinIO、Cloudflare R2 など）に切り替えるときは `.env` で次を設定します。
+
+```
+STORAGE_DRIVER=s3
+S3_BUCKET=hitotsu-files
+S3_REGION=ap-northeast-1
+S3_ENDPOINT=              # MinIO / R2 のときだけ
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+```
+
+1 ファイルの上限は `MAX_UPLOAD_MB`（既定 50）。実行できる形式（exe, bat, js など）は受け付けません。
+
 ## ディレクトリ
 
 ```
@@ -56,6 +72,7 @@ src/components/  共通 UI
 src/lib/         DB クライアント、ラベル、日付などのユーティリティ
 src/generated/   Prisma Client の生成物（コミットしない）
 docs/            開発計画などのドキュメント
+storage/         アップロードされたファイルの本体（コミットしない）
 ```
 
 ## 開発の進め方
