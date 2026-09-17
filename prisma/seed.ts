@@ -233,6 +233,10 @@ async function main() {
     });
   }
 
+  // 採番シーケンスを投入済みデータの続きに合わせる
+  await db.$queryRaw`SELECT setval('customer_code_seq', (SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM '[0-9]+$') AS INTEGER)), 0) + 1 FROM customers), false)`;
+  await db.$queryRaw`SELECT setval('project_code_seq', (SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM '[0-9]+$') AS INTEGER)), 0) + 1 FROM projects), false)`;
+
   console.log("seed 完了: users=%d customers=%d projects=%d", Object.keys(users).length, customerRows.length, projectRows.length);
 }
 
