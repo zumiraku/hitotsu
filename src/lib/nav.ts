@@ -14,5 +14,5 @@ export const NAV_MAIN: NavItem[] = [
 export const NAV_ADMIN: NavItem[] = [
   { href: "/users", label: "ユーザー・権限", icon: "users", perm: "users" },
   { href: "/audit", label: "変更履歴", icon: "audit", perm: "audit" },
-  { href: "/data", label: "データ入出力", icon: "data", stage: 8, perm: "csv.export" },
+  { href: "/data", label: "データ入出力", icon: "data", perm: "csv.export" },
 ];

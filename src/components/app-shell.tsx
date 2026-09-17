@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { GlobalSearch } from "@/components/global-search";
 import { Icon } from "@/components/icons";
 import { Avatar } from "@/components/ui/avatar";
 import { NAV_ADMIN, NAV_MAIN, type NavItem } from "@/lib/nav";
@@ -83,18 +84,7 @@ export function AppShell({ children, user }: { children: ReactNode; user: ShellU
           >
             <Icon name="menu" />
           </button>
-          <div className="relative max-w-[560px] flex-1">
-            <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted">
-              <Icon name="search" size={16} />
-            </span>
-            <input
-              id="global-search"
-              type="search"
-              placeholder="検索（ステージ8で実装）"
-              disabled
-              className="h-9 w-full rounded-lg border border-line bg-surface-2 pl-[34px] pr-3 text-[13.5px] disabled:cursor-not-allowed"
-            />
-          </div>
+          <GlobalSearch />
           <div className="ml-auto flex items-center gap-3">
             {process.env.NODE_ENV !== "production" ? <span className="hidden rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-bold tracking-wider text-warn sm:inline">開発環境</span> : null}
             <Link href="/settings/password" className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-surface-2" title="パスワードの変更">
