@@ -7,6 +7,7 @@ import { IMPORT_LABEL, type ImportKind } from "@/lib/csv";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
+import { liveProject, liveRefs } from "@/lib/scope";
 
 export const metadata = { title: "データ入出力" };
 export const dynamic = "force-dynamic";
@@ -31,9 +32,9 @@ export default async function DataPage() {
     Promise.all([
       db.customer.count({ where: { deletedAt: null } }),
       db.project.count({ where: { deletedAt: null } }),
-      db.task.count({ where: { OR: [{ projectId: null }, { project: { deletedAt: null } }] } }),
-      db.activity.count(),
-      db.note.count(),
+      db.task.count({ where: liveProject }),
+      db.activity.count({ where: liveRefs }),
+      db.note.count({ where: liveRefs }),
     ]),
     db.auditLog.findMany({ where: { action: { in: ["IMPORT", "EXPORT"] } }, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);

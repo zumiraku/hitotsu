@@ -84,3 +84,8 @@ export function localNow(d = new Date()) {
 export function fmtMD(d: Date) {
   return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
 }
+
+// 「重要, 重要, 新規」→ ["重要", "新規"]
+export function splitTags(s: string) {
+  return [...new Set(s.split(/[,、，;]/).map((t) => t.trim()).filter(Boolean))];
+}

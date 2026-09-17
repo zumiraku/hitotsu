@@ -7,7 +7,8 @@ export type HandoverDraft = { title: string; body: string; source: "rule" | "ai"
 
 // 案件に紐づく事実を集めて、ルールで引き継ぎメモの骨組みを作る。
 // AI が使えるときはこの骨組みを渡して文章だけ整える（事実は足させない）
-export async function draftHandover(projectId: string, opts: { authorName: string; showAmount: boolean }): Promise<HandoverDraft | null> {
+// 金額はメモに入れない（メモは全員が読めるので、金額の閲覧権限を回避してしまう）
+export async function draftHandover(projectId: string, opts: { authorName: string }): Promise<HandoverDraft | null> {
   const p = await db.project.findFirst({
     where: { id: projectId, deletedAt: null },
     include: {
@@ -35,7 +36,6 @@ export async function draftHandover(projectId: string, opts: { authorName: strin
   L.push(`・ステータス：${STATUS_LABEL[p.status]}（優先度：${PRIORITY_LABEL[p.priority]}）`);
   L.push(`・納期：${p.dueDate ? `${fmtDate(p.dueDate)}（${dueLabel(p.dueDate)}）` : "未設定"}`);
   L.push(`・お客さま：${c.name}${c.contactName ? `／先方窓口：${c.contactName}${c.contactTitle ? `（${c.contactTitle}）` : ""}` : ""}${c.tel ? `　TEL ${c.tel}` : ""}`);
-  if (opts.showAmount) L.push(`・金額：¥${p.amount.toLocaleString("ja-JP")}`);
   L.push(`・担当：${p.owner?.name ?? "未割当"}${p.members.length ? `／メンバー：${p.members.map((m) => m.user.name).join("、")}` : ""}`);
   if (p.summary) L.push(`・概要：${p.summary}`);
   L.push("");

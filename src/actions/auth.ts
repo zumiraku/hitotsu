@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSession, destroyOtherSessions, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
@@ -24,7 +25,10 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   const parsed = loginSchema.safeParse(raw);
   if (!parsed.success) return { message: parsed.error.issues[0].message, values: { email: raw.email } };
 
-  const blockedFor = loginBlocked(parsed.data.email);
+  // 同じ相手からの連続失敗だけを止める（他人のアカウントを外からロックできないように IP も鍵に入れる）
+  const ip = ((await headers()).get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const limitKey = `${ip}|${parsed.data.email}`;
+  const blockedFor = loginBlocked(limitKey);
   if (blockedFor) return { message: `失敗が続いたため、あと${blockedFor}分ほどログインできません`, values: { email: raw.email } };
 
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
@@ -32,10 +36,10 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   if (!ok) {
     // 実在しないユーザーでも同じくらいの時間がかかるようにしておく
     if (!user) await verifyPassword(parsed.data.password, "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345678");
-    recordLoginFailure(parsed.data.email);
+    recordLoginFailure(limitKey);
     return { message: LOGIN_FAILED, values: { email: raw.email } };
   }
-  clearLoginFailures(parsed.data.email);
+  clearLoginFailures(limitKey);
 
   await createSession(user.id);
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

@@ -2,7 +2,9 @@
 
 export function toCsv(headers: string[], rows: (string | number | null | undefined)[][]) {
   const cell = (v: string | number | null | undefined) => {
-    const s = v == null ? "" : String(v);
+    let s = v == null ? "" : String(v);
+    // Excel で数式として実行されないように、= + @ や記号始まりの文字列には ' を付ける
+    if (typeof v === "string" && /^[=+@\t\r]|^-[^\d.]/.test(s)) s = "'" + s;
     return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return [headers.map(cell).join(","), ...rows.map((r) => r.map(cell).join(","))].join("\r\n") + "\r\n";

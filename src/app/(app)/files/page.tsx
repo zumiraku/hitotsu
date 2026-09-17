@@ -14,6 +14,7 @@ import { SortHeader } from "@/components/ui/sort-header";
 import { activityOptions } from "@/lib/activity-options";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { liveRefs } from "@/lib/scope";
 import { can } from "@/lib/permissions";
 import { fileInclude } from "@/lib/files";
 import { fileSize, fmtDateTime } from "@/lib/format";
@@ -46,7 +47,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   const page = Math.max(1, Number(one(sp.page)) || 1);
 
   const where: Prisma.FileWhereInput = {
-    OR: [{ projectId: null }, { project: { deletedAt: null } }],
+    ...liveRefs,
     ...(project ? { projectId: project } : {}),
     ...(customer ? { customerId: customer } : {}),
     ...(kind ? { name: { endsWith: `.${kind}`, mode: "insensitive" } } : {}),

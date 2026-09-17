@@ -8,8 +8,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Docker で動かすため、必要なファイルだけを .next/standalone にまとめる
-  output: "standalone",
+  // Docker でビルドするときだけ、必要なファイルを .next/standalone にまとめる（npm start とは併用できないため）
+  output: process.env.NEXT_OUTPUT_STANDALONE ? "standalone" : undefined,
   poweredByHeader: false,
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

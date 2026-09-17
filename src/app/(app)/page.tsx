@@ -14,6 +14,7 @@ import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday, toInp
 import { ACTIVITY_LABEL, STATUS_COLOR, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 import { can } from "@/lib/permissions";
 import { projectAlerts } from "@/lib/project-alerts";
+import { liveProject, liveRefs } from "@/lib/scope";
 import { taskInclude, toTaskItem } from "@/lib/task-item";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,6 @@ export default async function DashboardPage() {
   const today = startOfToday();
   const weekEnd = endOfWeek();
   const utc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const liveTask = { OR: [{ projectId: null }, { project: { deletedAt: null } }] };
 
   const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users, actOptions, pinnedNotes, summary] = await Promise.all([
     db.project.findMany({
@@ -52,18 +52,19 @@ export default async function DashboardPage() {
       },
       orderBy: { updatedAt: "desc" },
     }),
-    db.task.findMany({ where: { done: false, ...liveTask }, include: taskInclude, orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }),
+    db.task.findMany({ where: { done: false, ...liveProject }, include: taskInclude, orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }),
     db.customer.count({ where: { deletedAt: null } }),
     db.activity.findMany({
+      where: liveRefs,
       take: 7,
       orderBy: { occurredAt: "desc" },
       include: { user: { select: { name: true, color: true } }, project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } },
     }),
     db.project.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
-    db.activity.count({ where: { occurredAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) } } }),
+    db.activity.count({ where: { occurredAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) }, ...liveRefs } }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true, color: true }, orderBy: { name: "asc" } }),
     activityOptions(),
-    db.note.findMany({ where: { pinned: true }, include: { author: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
+    db.note.findMany({ where: { pinned: true, ...liveRefs }, include: { author: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
     dailySummary(me.id),
   ]);
 
