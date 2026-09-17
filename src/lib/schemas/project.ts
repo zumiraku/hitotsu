@@ -9,6 +9,14 @@ const dateField = z
   .pipe(z.union([z.literal(""), z.iso.date("日付の形式が正しくありません")]))
   .transform((s) => (s ? new Date(`${s}T00:00:00Z`) : null));
 
+// "1,200,000" "¥120万" "１.５億" のような入力も円の整数に直す
+export function normalizeAmount(input: string) {
+  let s = input.replace(/[,，¥￥円s]/g, "").replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  const m = s.match(/^(d+(?:.d+)?)(億|万)$/);
+  if (m) s = String(Math.round(Number(m[1]) * (m[2] === "億" ? 100_000_000 : 10_000)));
+  return s;
+}
+
 export const projectSchema = z
   .object({
     name: z.string().trim().min(1, "案件名を入力してください").max(120, "120文字以内で入力してください"),
