@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Empty } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/page-header";
-import { KIND_LABEL, searchAll, type SearchKind } from "@/lib/search";
+import { smartSearch } from "@/lib/ai/smart-search";
+import { KIND_LABEL, type SearchKind } from "@/lib/search";
 
 export const metadata = { title: "検索" };
 export const dynamic = "force-dynamic";
@@ -14,12 +15,21 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().slice(0, 100);
   const kind = KINDS.includes(sp.kind as SearchKind) ? (sp.kind as SearchKind) : undefined;
-  const groups = q ? await searchAll(q, { limit: kind ? 100 : 10, kinds: kind ? [kind] : undefined }) : [];
+  const { groups, chips } = q ? await smartSearch(q, { limit: kind ? 100 : 10, kinds: kind ? [kind] : undefined }) : { groups: [], chips: [] };
   const total = groups.reduce((s, g) => s + g.total, 0);
 
   return (
     <div>
       <PageHeader title={q ? `「${q}」の検索結果` : "検索"} sub={q ? `${total}件` : "上の検索ボックスから、顧客・案件・タスク・メモ・ファイル・対応履歴を横断して探せます"} />
+      {chips.length ? (
+        <p className="mb-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-violet">
+          <Icon name="spark" size={14} />
+          こう解釈しました：
+          {chips.map((c) => (
+            <span key={c} className="rounded-full bg-violet-soft px-2 py-0.5 font-bold">{c}</span>
+          ))}
+        </p>
+      ) : null}
       {q ? (
         <div className="mb-3 flex flex-wrap gap-1.5">
           <Link href={`/search?q=${encodeURIComponent(q)}`} className={`badge ${!kind ? "bg-primary-soft text-primary" : "bg-surface-3 text-ink-2"}`}>すべて</Link>

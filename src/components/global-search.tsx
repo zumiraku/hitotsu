@@ -6,11 +6,13 @@ import { Icon } from "@/components/icons";
 
 type Hit = { id: string; kind: string; title: string; sub: string; href: string };
 type Group = { kind: string; label: string; hits: Hit[]; total: number };
+type Result = { groups: Group[]; chips: string[] };
 
 export function GlobalSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [groups, setGroups] = useState<Group[]>([]);
+  const [chips, setChips] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sel, setSel] = useState(0);
@@ -25,6 +27,7 @@ export function GlobalSearch() {
     abort.current?.abort();
     if (!value.trim()) {
       setGroups([]);
+      setChips([]);
       setOpen(false);
       return;
     }
@@ -35,8 +38,9 @@ export function GlobalSearch() {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(value)}`, { signal: ctrl.signal });
         if (res.ok) {
-          const json = (await res.json()) as { groups: Group[] };
+          const json = (await res.json()) as Result;
           setGroups(json.groups);
+          setChips(json.chips ?? []);
           setSel(0);
           setOpen(true);
         }
@@ -101,13 +105,21 @@ export function GlobalSearch() {
           if (groups.length) setOpen(true);
         }}
         onKeyDown={onKey}
-        placeholder="顧客・案件・タスク・メモ・ファイルを検索"
+        placeholder="検索（例：田中さんの今週期限のタスク）"
         autoComplete="off"
         aria-label="検索"
         className="h-9 w-full rounded-lg border border-line bg-surface-2 pl-[34px] pr-3 text-[13.5px] focus:border-primary focus:bg-surface focus:outline-none focus:ring-3 focus:ring-primary-soft"
       />
       {open ? (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-[70vh] overflow-auto rounded-[10px] border border-line bg-surface p-1.5 shadow-[0_12px_40px_rgba(18,28,40,0.22)]">
+          {chips.length ? (
+            <div className="mb-1 flex flex-wrap items-center gap-1.5 border-b border-line px-2.5 pb-2 pt-1.5 text-[11.5px] text-violet">
+              <Icon name="spark" size={13} />
+              {chips.map((c) => (
+                <span key={c} className="rounded-full bg-violet-soft px-2 py-0.5 font-bold">{c}</span>
+              ))}
+            </div>
+          ) : null}
           {groups.length === 0 ? (
             <p className="px-2.5 py-3 text-[13px] text-muted">{loading ? "検索中…" : `「${q}」に一致するものはありません`}</p>
           ) : (
