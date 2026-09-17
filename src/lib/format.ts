@@ -80,3 +80,7 @@ export function toInputDate(d: Date | null | undefined) {
 export function localNow(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+export function fmtMD(d: Date) {
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+}
