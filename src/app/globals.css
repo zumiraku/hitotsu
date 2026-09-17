@@ -95,3 +95,27 @@ h3 {
     font-variant-numeric: tabular-nums;
   }
 }
+
+@layer components {
+  .tbl {
+    @apply w-full border-collapse text-[13.5px];
+  }
+  .th {
+    @apply whitespace-nowrap border-b border-line bg-surface-2 px-3 py-2.5 text-left text-[11.5px] font-bold tracking-wider text-muted;
+  }
+  .td {
+    @apply border-b border-line px-3 py-2.5 align-middle;
+  }
+  .tr-link:hover .td {
+    @apply bg-surface-2;
+  }
+  .dl {
+    @apply grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1.5 text-[13.5px];
+  }
+  .dl dt {
+    @apply whitespace-nowrap text-muted;
+  }
+  .dl dd {
+    @apply min-w-0 break-words;
+  }
+}
