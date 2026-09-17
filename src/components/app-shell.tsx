@@ -69,7 +69,7 @@ export function AppShell({ children, user }: { children: ReactNode; user: ShellU
             <NavLink key={item.href} item={item} active={isActive(item.href)} onClick={close} />
           ))}
         </nav>
-        <div className="border-t border-white/10 px-3.5 py-3 text-[11px] tracking-wider opacity-70">v0.1 開発中</div>
+        <div className="border-t border-white/10 px-3.5 py-3 text-[11px] tracking-wider opacity-70">ヒトツ v{process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0"}</div>
       </aside>
 
       {open ? <button type="button" aria-label="メニューを閉じる" onClick={close} className="fixed inset-0 z-30 bg-black/50 lg:hidden" /> : null}
