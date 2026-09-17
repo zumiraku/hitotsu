@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActivityTimeline } from "@/components/activity-timeline";
+import { AuditList } from "@/components/audit-list";
 import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
+import { FileList } from "@/components/file-list";
 import { Icon } from "@/components/icons";
-import { Avatar, UserChip } from "@/components/ui/avatar";
+import { UserChip } from "@/components/ui/avatar";
 import { CustomerTypeBadge, StatusBadge, Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
 import { db } from "@/lib/db";
-import { ago, daysLeft, dueLabel, fileSize, fmtDate, fmtDateTime, yen } from "@/lib/format";
-import { ACTIVITY_LABEL, PRIORITY_LABEL, STATUS_ORDER, isClosed } from "@/lib/labels";
+import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
+import { PRIORITY_LABEL, STATUS_ORDER, isClosed } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
-
-const EXT_COLOR: Record<string, string> = { xlsx: "#1d7f49", xls: "#1d7f49", csv: "#1d7f49", docx: "#2a66a8", doc: "#2a66a8", pdf: "#b93b35", pptx: "#c8641e", zip: "#66727f", jpg: "#6b4a9e", jpeg: "#6b4a9e", png: "#6b4a9e", ai: "#d28a00" };
-const ACTIVITY_ICON: Record<string, string> = { CALL: "phone", MAIL: "mail", VISIT: "pin", MEETING: "chat", MEMO: "memo" };
-const ACTION_LABEL: Record<string, string> = { CREATE: "作成", UPDATE: "更新", DELETE: "削除", STATUS: "ステータス変更", ROLE: "権限変更", IMPORT: "CSV取込", EXPORT: "CSV出力", LOGIN: "ログイン" };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,6 +71,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/projects/new?customer=${c.id}`} className="btn">＋ 案件を追加</Link>
           <Link href={`/customers/${c.id}/edit`} className="btn">編集</Link>
           <DeleteCustomerButton id={c.id} name={c.name} />
         </div>
@@ -106,7 +106,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       return (
                         <tr key={p.id} className="tr-link">
                           <td className="td">
-                            <div className="font-bold">{p.name}</div>
+                            <Link href={`/projects/${p.id}`} className="font-bold hover:underline">{p.name}</Link>
                             <div className="font-mono text-xs text-muted">{p.code}</div>
                           </td>
                           <td className="td"><StatusBadge status={p.status} /></td>
@@ -139,28 +139,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <h2 className="text-[15px] font-bold">対応履歴 <span className="ml-1 font-mono text-xs font-normal text-muted">{activities.length}</span></h2>
             </div>
             <div className="card-body">
-              {activities.length === 0 ? (
-                <Empty>まだ対応履歴がありません</Empty>
-              ) : (
-                <ol className="relative flex flex-col before:absolute before:bottom-2 before:left-[13px] before:top-2 before:w-0.5 before:bg-line">
-                  {activities.map((a) => (
-                    <li key={a.id} className="relative flex gap-3 py-2">
-                      <span className="z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-surface bg-surface-3 text-ink-2">
-                        <Icon name={ACTIVITY_ICON[a.type]} size={14} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                          <span className="rounded-full border border-line px-2 text-[11px]">{ACTIVITY_LABEL[a.type]}</span>
-                          <b className="text-ink">{a.user?.name}</b>
-                          <span>{fmtDateTime(a.occurredAt)}</span>
-                          {a.project ? <span className="text-primary">{a.project.name}</span> : null}
-                        </div>
-                        <p className="mt-0.5 break-words text-[13.5px]">{a.body}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              )}
+              <ActivityTimeline items={activities} showProject />
               <p className="mt-3 border-t border-dashed border-line pt-3 text-[12.5px] text-muted">対応履歴の記録はステージ5で追加します</p>
             </div>
           </section>
@@ -203,56 +182,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{files.length}</span></h2>
             </div>
             <div className="card-body">
-              {files.length === 0 ? (
-                <Empty>ファイルはありません</Empty>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {files.map((f) => {
-                    const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
-                    return (
-                      <li key={f.id} className="flex items-center gap-2.5 py-2">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-bold text-white" style={{ background: EXT_COLOR[ext] ?? "#66727f" }}>
-                          {ext.slice(0, 4).toUpperCase()}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-bold" title={f.name}>{f.name}</div>
-                          <div className="truncate text-xs text-muted">v{f.version} · {fileSize(f.size)} · {f.uploader?.name.split(" ")[0]} · {ago(f.createdAt)}</div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              <FileList items={files} />
             </div>
           </section>
 
           <section className="card">
             <div className="card-head"><h2 className="text-[15px] font-bold">変更履歴</h2></div>
             <div className="card-body">
-              {logs.length === 0 ? (
-                <Empty>変更履歴はありません</Empty>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {logs.map((l) => {
-                    const changes = Array.isArray(l.changes) ? (l.changes as { field: string; from: string; to: string }[]) : [];
-                    return (
-                      <li key={l.id} className="flex gap-2.5 py-2">
-                        {l.user ? <Avatar name={l.user.name} color={l.user.color} /> : null}
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[13px]"><b>{ACTION_LABEL[l.action] ?? l.action}</b><span className="ml-2 text-xs text-muted">{l.user?.name} · {fmtDateTime(l.createdAt)}</span></div>
-                          {changes.length ? (
-                            <ul className="mt-0.5 text-xs text-ink-2">
-                              {changes.map((ch, i) => (
-                                <li key={i}><span className="text-muted">{ch.field}</span>：<span className="text-bad line-through">{ch.from}</span> → <b className="text-good">{ch.to}</b></li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              <AuditList items={logs} />
             </div>
           </section>
         </div>
