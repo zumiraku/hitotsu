@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ProjectStatus } from "@/generated/prisma/enums";
-import { changeProjectStatus } from "@/app/projects/actions";
+import { changeProjectStatus } from "@/actions/projects";
 import { Icon } from "@/components/icons";
 import { Avatar } from "@/components/ui/avatar";
 import { STATUS_CLASS, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
@@ -22,7 +22,7 @@ export type BoardCard = {
   alertLevel: "bad" | "warn" | null;
 };
 
-export function Board({ cards: initial }: { cards: BoardCard[] }) {
+export function Board({ cards: initial, canDrag = true }: { cards: BoardCard[]; canDrag?: boolean }) {
   const router = useRouter();
   const [cards, setCards] = useState(initial);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export function Board({ cards: initial }: { cards: BoardCard[] }) {
               {items.map((c) => (
                 <div
                   key={c.id}
-                  draggable
+                  draggable={canDrag}
                   onDragStart={(e) => {
                     setDragId(c.id);
                     e.dataTransfer.effectAllowed = "move";
@@ -90,7 +90,7 @@ export function Board({ cards: initial }: { cards: BoardCard[] }) {
                     setDragId(null);
                     setOver(null);
                   }}
-                  className={`mb-2 cursor-grab rounded-[7px] border border-line bg-surface p-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.03)] hover:border-line-strong active:cursor-grabbing ${dragId === c.id ? "opacity-40" : ""}`}
+                  className={`mb-2 rounded-[7px] border border-line bg-surface p-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.03)] hover:border-line-strong ${canDrag ? "cursor-grab active:cursor-grabbing" : ""} ${dragId === c.id ? "opacity-40" : ""}`}
                 >
                   <Link href={`/projects/${c.id}`} className="block text-[13.5px] font-bold leading-snug hover:underline" draggable={false}>
                     {c.name}
@@ -116,7 +116,7 @@ export function Board({ cards: initial }: { cards: BoardCard[] }) {
           );
         })}
       </div>
-      <p className="mt-1.5 text-xs text-muted">カードをドラッグしてステータスを変更できます。変更はすぐ保存され、変更履歴に残ります</p>
+      {canDrag ? <p className="mt-1.5 text-xs text-muted">カードをドラッグしてステータスを変更できます。変更はすぐ保存され、変更履歴に残ります</p> : null}
     </div>
   );
 }

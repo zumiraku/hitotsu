@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteCustomer } from "@/app/customers/actions";
+import { deleteCustomer } from "@/actions/customers";
 
 export function DeleteCustomerButton({ id, name }: { id: string; name: string }) {
   const [pending, start] = useTransition();

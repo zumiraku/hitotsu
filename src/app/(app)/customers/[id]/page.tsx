@@ -12,7 +12,9 @@ import { UserChip } from "@/components/ui/avatar";
 import { CustomerTypeBadge, StatusBadge, Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
 import { activityOptions } from "@/lib/activity-options";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
 import { PRIORITY_LABEL, STATUS_ORDER, isClosed } from "@/lib/labels";
 
@@ -26,6 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await currentUser();
   const c = await db.customer.findFirst({
     where: { id, deletedAt: null },
     include: {
@@ -81,9 +84,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/projects/new?customer=${c.id}`} className="btn">＋ 案件を追加</Link>
-          <Link href={`/customers/${c.id}/edit`} className="btn">編集</Link>
-          <DeleteCustomerButton id={c.id} name={c.name} />
+          {can(me, "edit") ? <Link href={`/projects/new?customer=${c.id}`} className="btn">＋ 案件を追加</Link> : null}
+          {can(me, "edit") ? <Link href={`/customers/${c.id}/edit`} className="btn">編集</Link> : null}
+          {can(me, "delete") ? <DeleteCustomerButton id={c.id} name={c.name} /> : null}
         </div>
       </div>
 
@@ -105,7 +108,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                       <th className="th">優先度</th>
                       <th className="th">担当</th>
                       <th className="th">納期</th>
-                      <th className="th text-right">金額</th>
+                      {can(me, "amount") ? <th className="th text-right">金額</th> : null}
                       <th className="th text-right">未完了</th>
                     </tr>
                   </thead>
@@ -133,7 +136,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                               </span>
                             ) : <span className="text-muted">—</span>}
                           </td>
-                          <td className="td tnum text-right">{yen(p.amount)}</td>
+                          {can(me, "amount") ? <td className="td tnum text-right">{yen(p.amount)}</td> : null}
                           <td className="td tnum text-right">{p._count.tasks}</td>
                         </tr>
                       );
@@ -149,18 +152,20 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <h2 className="text-[15px] font-bold">対応履歴 <span className="ml-1 font-mono text-xs font-normal text-muted">{activities.length}</span></h2>
             </div>
             <div className="card-body">
-              <ActivityTimeline items={activities} showProject options={actOptions} />
-              <ActivityQuickForm customerId={c.id} />
+              <ActivityTimeline items={activities} showProject options={can(me, "activity") ? actOptions : undefined} />
+              {can(me, "activity") ? <ActivityQuickForm customerId={c.id} /> : null}
             </div>
           </section>
 
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">社内メモ <span className="ml-1 font-mono text-xs font-normal text-muted">{notes.length}</span></h2>
-              <span className="flex gap-1.5">
-                <Link href={`/notes/new?customer=${c.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
-                <Link href={`/notes/new?customer=${c.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
-              </span>
+              {can(me, "activity") ? (
+                <span className="flex gap-1.5">
+                  <Link href={`/notes/new?customer=${c.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
+                  <Link href={`/notes/new?customer=${c.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
+                </span>
+              ) : null}
             </div>
             <div className="card-body">
               {notes.length === 0 ? (
@@ -168,7 +173,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               ) : (
                 <div className="flex flex-col gap-3">
                   {notes.map((n) => (
-                    <NoteCard key={n.id} note={n} />
+                    <NoteCard key={n.id} note={n} editable={can(me, "activity")} />
                   ))}
                 </div>
               )}
@@ -211,19 +216,21 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{files.length}</span></h2>
-              <UploadButton options={actOptions} preset={{ customerId: c.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
+              {can(me, "file") ? <UploadButton options={actOptions} preset={{ customerId: c.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" /> : null}
             </div>
             <div className="card-body">
-              <FileList items={files} editable />
+              <FileList items={files} editable={can(me, "file")} />
             </div>
           </section>
 
-          <section className="card">
-            <div className="card-head"><h2 className="text-[15px] font-bold">変更履歴</h2></div>
-            <div className="card-body">
-              <AuditList items={logs} />
-            </div>
-          </section>
+          {can(me, "audit") ? (
+            <section className="card">
+              <div className="card-head"><h2 className="text-[15px] font-bold">変更履歴</h2></div>
+              <div className="card-body">
+                <AuditList items={logs} />
+              </div>
+            </section>
+          ) : null}
         </div>
       </div>
     </div>

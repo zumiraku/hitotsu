@@ -7,7 +7,9 @@ import { NoteFilters } from "@/components/notes/note-filters";
 import { Empty } from "@/components/ui/empty";
 import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 
 export const metadata = { title: "社内メモ・引き継ぎ" };
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function NotesPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const me = await currentUser();
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const category = CATS.has(one(sp.category)) ? (one(sp.category) as NoteCategory) : undefined;
@@ -40,7 +43,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader title="社内メモ・引き継ぎ" sub={`${notes.length}件${q || category || pinnedOnly ? "（絞り込み中）" : ""} / 全${total}件。担当が変わっても困らないように、ルールと経緯をここに残します`}>
-        <Link href="/notes/new" className="btn btn-primary">＋ メモを追加</Link>
+        {can(me, "activity") ? <Link href="/notes/new" className="btn btn-primary">＋ メモを追加</Link> : null}
       </PageHeader>
       <Suspense>
         <Flash messages={{ created: "メモを追加しました", saved: "保存しました" }} />
@@ -51,7 +54,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {notes.map((n) => (
-            <NoteCard key={n.id} note={n} />
+            <NoteCard key={n.id} note={n} editable={can(me, "activity")} />
           ))}
         </div>
       )}

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { saveUpload } from "@/lib/files";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("file");
+  if (denied) return NextResponse.json({ ok: false, message: denied }, { status: 403 });
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ ok: false, message: "ファイルが選ばれていません" }, { status: 400 });

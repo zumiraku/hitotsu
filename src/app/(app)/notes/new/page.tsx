@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { createNote } from "@/app/notes/actions";
+import { createNote } from "@/actions/notes";
 import { NoteForm } from "@/components/notes/note-form";
+import { Forbidden } from "@/components/forbidden";
 import { PageHeader } from "@/components/ui/page-header";
 import { activityOptions } from "@/lib/activity-options";
+import { currentUser } from "@/lib/current-user";
+import { can } from "@/lib/permissions";
 
 export const metadata = { title: "メモを追加" };
 export const dynamic = "force-dynamic";
 
 export default async function NewNotePage({ searchParams }: { searchParams: Promise<{ project?: string; customer?: string; category?: string }> }) {
   const sp = await searchParams;
+  const me = await currentUser();
+  if (!can(me, "activity")) return <Forbidden title="メモを追加" need="一般以上" />;
   const { projects, customers } = await activityOptions();
   const project = projects.find((p) => p.id === sp.project);
   const customer = customers.find((c) => c.id === sp.customer);

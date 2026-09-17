@@ -1,11 +1,13 @@
 import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
+import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { storage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await sessionUser())) return NextResponse.json({ message: "ログインが必要です" }, { status: 401 });
   const { id } = await params;
   const f = await db.file.findUnique({ where: { id } });
   if (!f || !f.storagePath) return NextResponse.json({ message: "ファイルが見つかりません" }, { status: 404 });

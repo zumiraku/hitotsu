@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { diffChanges, writeAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { fmtDate } from "@/lib/format";
 import { parseTaskForm, type TaskFieldErrors } from "@/lib/schemas/task";
@@ -35,7 +35,8 @@ async function projectLabel(id: string | null) {
 export async function createTask(_prev: TaskFormState, formData: FormData): Promise<TaskFormState> {
   const parsed = parseTaskForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const projectId = parsed.data.projectId || null;
   if (projectId) {
     const p = await db.project.findFirst({ where: { id: projectId, deletedAt: null }, select: { id: true } });
@@ -68,7 +69,8 @@ export async function createTask(_prev: TaskFormState, formData: FormData): Prom
 export async function updateTask(id: string, _prev: TaskFormState, formData: FormData): Promise<TaskFormState> {
   const parsed = parseTaskForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const before = await db.task.findUnique({ where: { id } });
   if (!before) return { message: "このタスクはすでに削除されています" };
 
@@ -91,7 +93,8 @@ export async function updateTask(id: string, _prev: TaskFormState, formData: For
 }
 
 export async function toggleTask(id: string, done: boolean): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const t = await db.task.findUnique({ where: { id }, select: { title: true, done: true, projectId: true } });
   if (!t) return { message: "このタスクはすでに削除されています" };
   if (t.done === done) return {};
@@ -114,7 +117,8 @@ export async function toggleTask(id: string, done: boolean): Promise<{ message?:
 }
 
 export async function deleteTask(id: string): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const t = await db.task.findUnique({ where: { id }, select: { title: true, projectId: true } });
   if (!t) return { message: "このタスクはすでに削除されています" };
 

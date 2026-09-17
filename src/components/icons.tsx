@@ -20,6 +20,7 @@ const paths: Record<string, string> = {
   chat: "M3.5 4.5h13v8h-7l-3.5 3v-3h-2.5z",
   memo: "M4 4h12v12H4zM7 8h6M7 11h4",
   check: "M4 10.5l4 4 8-8.5",
+  lock: "M4 9h12v8H4zM7 9V6.5a3 3 0 0 1 6 0V9",
   download: "M10 3v10M6 9l4 4 4-4M4 17h12",
   upload: "M10 13V3M6 7l4-4 4 4M4 17h12",
   pinned: "M8 3h4l-.5 4 2.5 3v1H6v-1l2.5-3zM10 11v6",

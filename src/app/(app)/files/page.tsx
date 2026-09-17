@@ -12,7 +12,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { SortHeader } from "@/components/ui/sort-header";
 import { activityOptions } from "@/lib/activity-options";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 import { fileInclude } from "@/lib/files";
 import { fileSize, fmtDateTime } from "@/lib/format";
 import { extOf } from "@/lib/storage";
@@ -32,6 +34,7 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function FilesPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const me = await currentUser();
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const kind = one(sp.kind).toLowerCase();
@@ -85,7 +88,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader title="ファイル" sub={`${total}件 · 合計 ${fileSize(totalBytes)}。案件・顧客に紐づけて保存し、同じ名前は版として重ねます`}>
-        <UploadButton options={options} />
+        {can(me, "file") ? <UploadButton options={options} /> : null}
       </PageHeader>
       <Suspense>
         <FileFilters kinds={kinds} projects={options.projects} customers={options.customers} />
@@ -131,7 +134,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
                       <a href={`/api/files/${f.id}`} aria-label="ダウンロード" title="ダウンロード" className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-ink">
                         <Icon name="download" size={15} />
                       </a>
-                      <DeleteFileButton id={f.id} name={f.name} version={f.version} />
+                      {can(me, "file") ? <DeleteFileButton id={f.id} name={f.name} version={f.version} /> : null}
                     </span>
                   </td>
                 </tr>

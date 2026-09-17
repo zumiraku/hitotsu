@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { deleteNote, togglePin } from "@/app/notes/actions";
+import { deleteNote, togglePin } from "@/actions/notes";
 import { Icon } from "@/components/icons";
 
 export function NoteCardMenu({ id, pinned: initialPinned }: { id: string; pinned: boolean }) {

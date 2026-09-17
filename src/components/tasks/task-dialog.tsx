@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
-import type { TaskFormState } from "@/app/tasks/actions";
+import type { TaskFormState } from "@/actions/tasks";
 import { Field, inputClass } from "@/components/ui/field";
 
 export type TaskOptions = {

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ProjectStatus } from "@/generated/prisma/enums";
-import { changeProjectStatus } from "@/app/projects/actions";
+import { changeProjectStatus } from "@/actions/projects";
 import { STATUS_CLASS, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 
 export function StatusSelect({ id, status }: { id: string; status: ProjectStatus }) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import type { NoteFormState } from "@/app/notes/actions";
+import type { NoteFormState } from "@/actions/notes";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { NOTE_CATEGORY_LABEL } from "@/lib/labels";
 
