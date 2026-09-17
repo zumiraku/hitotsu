@@ -4,6 +4,7 @@ import { ActivityQuickForm } from "@/components/activities/activity-quick-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { AuditList } from "@/components/audit-list";
 import { FileList } from "@/components/file-list";
+import { UploadButton } from "@/components/files/upload-dialog";
 import { Icon } from "@/components/icons";
 import { NoteCard } from "@/components/notes/note-card";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
@@ -38,7 +39,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       tasks: { include: taskInclude, orderBy: [{ done: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] },
       activities: { include: { user: { select: { name: true } } }, orderBy: { occurredAt: "desc" }, take: 50 },
       notes: { include: { author: { select: { name: true, color: true } }, customer: { select: { id: true, name: true } } }, orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }] },
-      files: { include: { uploader: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      files: { include: { uploader: { select: { name: true } } }, orderBy: [{ name: "asc" }, { version: "desc" }] },
     },
   });
   if (!p) notFound();
@@ -206,8 +207,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </section>
 
           <section className="card">
-            <div className="card-head"><h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{p.files.length}</span></h2></div>
-            <div className="card-body"><FileList items={p.files} /></div>
+            <div className="card-head">
+              <h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{p.files.length}</span></h2>
+              <UploadButton options={actOptions} preset={{ projectId: p.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
+            </div>
+            <div className="card-body"><FileList items={p.files} editable /></div>
           </section>
 
           <section className="card">

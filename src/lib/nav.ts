@@ -6,7 +6,7 @@ export const NAV_MAIN: NavItem[] = [
   { href: "/projects", label: "案件", icon: "projects" },
   { href: "/tasks", label: "タスク", icon: "tasks" },
   { href: "/notes", label: "社内メモ・引き継ぎ", icon: "notes" },
-  { href: "/files", label: "ファイル", icon: "files", stage: 6 },
+  { href: "/files", label: "ファイル", icon: "files" },
 ];
 
 export const NAV_ADMIN: NavItem[] = [

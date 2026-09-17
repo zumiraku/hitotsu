@@ -5,6 +5,7 @@ import { ActivityTimeline } from "@/components/activity-timeline";
 import { AuditList } from "@/components/audit-list";
 import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
 import { FileList } from "@/components/file-list";
+import { UploadButton } from "@/components/files/upload-dialog";
 import { Icon } from "@/components/icons";
 import { NoteCard } from "@/components/notes/note-card";
 import { UserChip } from "@/components/ui/avatar";
@@ -210,9 +211,10 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{files.length}</span></h2>
+              <UploadButton options={actOptions} preset={{ customerId: c.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
             </div>
             <div className="card-body">
-              <FileList items={files} />
+              <FileList items={files} editable />
             </div>
           </section>
 
