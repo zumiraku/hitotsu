@@ -75,3 +75,8 @@ export function toInputDate(d: Date | null | undefined) {
   const x = dateOnly(d);
   return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
 }
+
+// <input type="datetime-local"> 用（ローカル時刻）
+export function localNow(d = new Date()) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
