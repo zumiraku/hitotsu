@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActivityQuickForm } from "@/components/activities/activity-quick-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { AuditList } from "@/components/audit-list";
 import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
 import { FileList } from "@/components/file-list";
 import { Icon } from "@/components/icons";
+import { NoteCard } from "@/components/notes/note-card";
 import { UserChip } from "@/components/ui/avatar";
 import { CustomerTypeBadge, StatusBadge, Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
+import { activityOptions } from "@/lib/activity-options";
 import { db } from "@/lib/db";
 import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
 import { PRIORITY_LABEL, STATUS_ORDER, isClosed } from "@/lib/labels";
@@ -36,7 +39,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   });
   if (!c) notFound();
 
-  const [activities, logs] = await Promise.all([
+  const [activities, logs, actOptions, notes] = await Promise.all([
     db.activity.findMany({
       where: { OR: [{ customerId: id }, { project: { customerId: id } }] },
       include: { user: { select: { name: true } }, project: { select: { id: true, name: true } } },
@@ -44,6 +47,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       take: 50,
     }),
     db.auditLog.findMany({ where: { targetType: "customer", targetId: id }, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
+    activityOptions(),
+    db.note.findMany({
+      where: { OR: [{ customerId: id }, { project: { customerId: id, deletedAt: null } }] },
+      include: { author: { select: { name: true, color: true } }, project: { select: { id: true, name: true } } },
+      orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
+    }),
   ]);
 
   const projects = [...c.projects].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
@@ -139,8 +148,29 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <h2 className="text-[15px] font-bold">対応履歴 <span className="ml-1 font-mono text-xs font-normal text-muted">{activities.length}</span></h2>
             </div>
             <div className="card-body">
-              <ActivityTimeline items={activities} showProject />
-              <p className="mt-3 border-t border-dashed border-line pt-3 text-[12.5px] text-muted">対応履歴の記録はステージ5で追加します</p>
+              <ActivityTimeline items={activities} showProject options={actOptions} />
+              <ActivityQuickForm customerId={c.id} />
+            </div>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
+              <h2 className="text-[15px] font-bold">社内メモ <span className="ml-1 font-mono text-xs font-normal text-muted">{notes.length}</span></h2>
+              <span className="flex gap-1.5">
+                <Link href={`/notes/new?customer=${c.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
+                <Link href={`/notes/new?customer=${c.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
+              </span>
+            </div>
+            <div className="card-body">
+              {notes.length === 0 ? (
+                <Empty>この顧客に紐づくメモはまだありません</Empty>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {notes.map((n) => (
+                    <NoteCard key={n.id} note={n} />
+                  ))}
+                </div>
+              )}
             </div>
           </section>
         </div>

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { AddActivityButton } from "@/components/activities/activity-item-menu";
 import { Icon } from "@/components/icons";
+import { CategoryBadge } from "@/components/notes/note-card";
 import { TaskRow } from "@/components/tasks/task-row";
 import { Avatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/badge";
+import { activityOptions } from "@/lib/activity-options";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday, toInputDate } from "@/lib/format";
@@ -35,7 +38,7 @@ export default async function DashboardPage() {
   const utc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const liveTask = { OR: [{ projectId: null }, { project: { deletedAt: null } }] };
 
-  const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users] = await Promise.all([
+  const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users, actOptions, pinnedNotes] = await Promise.all([
     db.project.findMany({
       where: { deletedAt: null, status: { in: ["ACTIVE", "HOLD", "LEAD"] } },
       include: {
@@ -56,6 +59,8 @@ export default async function DashboardPage() {
     db.project.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
     db.activity.count({ where: { occurredAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) } } }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true, color: true }, orderBy: { name: "asc" } }),
+    activityOptions(),
+    db.note.findMany({ where: { pinned: true }, include: { author: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
   ]);
 
   const active = projects.filter((p) => p.status === "ACTIVE");
@@ -103,7 +108,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex gap-2">
           <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link>
-          <Link href="/tasks" className="btn">タスク</Link>
+          <AddActivityButton options={actOptions} />
         </div>
       </div>
 
@@ -247,6 +252,30 @@ export default async function DashboardPage() {
               </ul>
             </div>
           </section>
+
+          {pinnedNotes.length ? (
+            <section className="card">
+              <div className="card-head">
+                <h2 className="text-[15px] font-bold">ピン留めメモ</h2>
+                <Link href="/notes?pinned=1" className="text-xs text-primary">すべて見る</Link>
+              </div>
+              <div className="card-body">
+                <ul className="divide-y divide-line">
+                  {pinnedNotes.map((n) => (
+                    <li key={n.id} className="py-2">
+                      <Link href={`/notes#note-${n.id}`} className="flex items-start gap-2 hover:underline">
+                        <CategoryBadge category={n.category} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13.5px] font-bold">{n.title}</span>
+                          <span className="block truncate text-xs text-muted">{n.author?.name.split(" ")[0]} · {n.body.split("\n")[0]}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          ) : null}
 
           <div className="flex items-start gap-2.5 rounded-[7px] bg-violet-soft px-3 py-2.5 text-[13px] text-violet">
             <Icon name="spark" size={16} className="mt-0.5 shrink-0" />

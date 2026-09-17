@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActivityQuickForm } from "@/components/activities/activity-quick-form";
 import { ActivityTimeline } from "@/components/activity-timeline";
 import { AuditList } from "@/components/audit-list";
 import { FileList } from "@/components/file-list";
 import { Icon } from "@/components/icons";
+import { NoteCard } from "@/components/notes/note-card";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { StatusSelect } from "@/components/projects/status-select";
 import { AddTaskButton, TaskRow } from "@/components/tasks/task-row";
 import { Avatar, UserChip } from "@/components/ui/avatar";
 import { Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
+import { activityOptions } from "@/lib/activity-options";
 import { db } from "@/lib/db";
 import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
-import { NOTE_CATEGORY_LABEL, PRIORITY_LABEL, isClosed } from "@/lib/labels";
+import { PRIORITY_LABEL, isClosed } from "@/lib/labels";
 import { projectAlerts } from "@/lib/project-alerts";
 import { taskInclude, toTaskItem } from "@/lib/task-item";
 
@@ -34,16 +37,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       members: { include: { user: { select: { id: true, name: true, color: true } } } },
       tasks: { include: taskInclude, orderBy: [{ done: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] },
       activities: { include: { user: { select: { name: true } } }, orderBy: { occurredAt: "desc" }, take: 50 },
-      notes: { include: { author: { select: { name: true } } }, orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] },
+      notes: { include: { author: { select: { name: true, color: true } }, customer: { select: { id: true, name: true } } }, orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }] },
       files: { include: { uploader: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!p) notFound();
 
-  const [logs, users, projectOptions] = await Promise.all([
+  const [logs, users, projectOptions, actOptions] = await Promise.all([
     db.auditLog.findMany({ where: { targetType: "project", targetId: id }, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     db.project.findMany({ where: { deletedAt: null, status: { in: ["LEAD", "ACTIVE", "HOLD"] } }, select: { id: true, name: true }, orderBy: { updatedAt: "desc" } }),
+    activityOptions(),
   ]);
   const taskOptions = { users, projects: projectOptions.some((x) => x.id === p.id) ? projectOptions : [{ id: p.id, name: p.name }, ...projectOptions] };
 
@@ -131,28 +135,31 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <h2 className="text-[15px] font-bold">対応履歴 <span className="ml-1 font-mono text-xs font-normal text-muted">{p.activities.length}</span></h2>
             </div>
             <div className="card-body">
-              <ActivityTimeline items={p.activities} />
-              <p className="mt-3 border-t border-dashed border-line pt-3 text-[12.5px] text-muted">対応履歴の記録はステージ5で追加します</p>
+              <ActivityTimeline items={p.activities} options={actOptions} />
+              <ActivityQuickForm projectId={p.id} />
             </div>
           </section>
 
-          {p.notes.length ? (
-            <section className="card">
-              <div className="card-head"><h2 className="text-[15px] font-bold">社内メモ <span className="ml-1 font-mono text-xs font-normal text-muted">{p.notes.length}</span></h2></div>
-              <div className="card-body flex flex-col gap-3">
-                {p.notes.map((n) => (
-                  <article key={n.id} className={`rounded-[7px] border border-line p-3 ${n.pinned ? "border-warn shadow-[inset_3px_0_0_var(--color-warn)]" : ""}`}>
-                    <div className="mb-1 flex flex-wrap items-center gap-2">
-                      <span className={`badge ${n.category === "HANDOVER" ? "bg-warn-soft text-warn" : n.category === "RULE" ? "bg-info-soft text-info" : "bg-neutral-soft text-neutral"}`}>{NOTE_CATEGORY_LABEL[n.category]}</span>
-                      <b className="text-[13.5px]">{n.title}</b>
-                    </div>
-                    <p className="whitespace-pre-wrap text-[13px] text-ink-2">{n.body}</p>
-                    <div className="mt-2 text-xs text-muted">{n.author?.name} · {fmtDate(n.createdAt)}</div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
+          <section className="card">
+            <div className="card-head">
+              <h2 className="text-[15px] font-bold">社内メモ <span className="ml-1 font-mono text-xs font-normal text-muted">{p.notes.length}</span></h2>
+              <span className="flex gap-1.5">
+                <Link href={`/notes/new?project=${p.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
+                <Link href={`/notes/new?project=${p.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
+              </span>
+            </div>
+            <div className="card-body">
+              {p.notes.length === 0 ? (
+                <Empty>この案件に紐づくメモはまだありません</Empty>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {p.notes.map((n) => (
+                    <NoteCard key={n.id} note={n} showLinks={false} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         </div>
 
         <div className="flex flex-col gap-4">
