@@ -7,6 +7,7 @@ import { FileList } from "@/components/file-list";
 import { UploadButton } from "@/components/files/upload-dialog";
 import { Icon } from "@/components/icons";
 import { NoteCard } from "@/components/notes/note-card";
+import { HandoverButton } from "@/components/ai/handover-button";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { StatusSelect } from "@/components/projects/status-select";
 import { AddTaskButton, TaskRow } from "@/components/tasks/task-row";
@@ -91,6 +92,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {can(me, "activity") ? <HandoverButton projectId={p.id} /> : null}
           {can(me, "edit") ? <Link href={`/projects/${p.id}/edit`} className="btn">編集</Link> : null}
           {can(me, "delete") ? <DeleteProjectButton id={p.id} name={p.name} /> : null}
         </div>
