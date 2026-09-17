@@ -1,8 +1,17 @@
-import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { sessionUser } from "@/lib/auth";
+import { DENIED, can, type Perm } from "@/lib/permissions";
 
-// ログインはステージ7で入れる。それまでは固定ユーザーで動かす
+// ログイン中のユーザー。未ログインならログイン画面へ
 export async function currentUser() {
-  const user = await db.user.findFirst({ where: { email: "takahashi@example.com", isActive: true } });
-  if (!user) throw new Error("ユーザーが見つかりません。npm run db:seed を実行してください");
+  const user = await sessionUser();
+  if (!user) redirect("/login");
   return user;
+}
+
+// Server Action 用。権限がなければメッセージを返す側で使う
+export async function requirePerm(perm: Perm) {
+  const user = await currentUser();
+  if (!can(user, perm)) return { user, denied: DENIED };
+  return { user, denied: null };
 }

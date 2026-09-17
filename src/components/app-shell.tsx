@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { Icon } from "@/components/icons";
+import { Avatar } from "@/components/ui/avatar";
 import { NAV_ADMIN, NAV_MAIN, type NavItem } from "@/lib/nav";
+import type { Perm } from "@/lib/permissions";
+
+export type ShellUser = { name: string; color: string; roleLabel: string; perms: Perm[] };
 
 function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
   return (
@@ -22,7 +27,7 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
   );
 }
 
-export function AppShell({ children, userName }: { children: ReactNode; userName: string }) {
+export function AppShell({ children, user }: { children: ReactNode; user: ShellUser }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -35,6 +40,8 @@ export function AppShell({ children, userName }: { children: ReactNode; userName
   }, [open]);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const allowed = (item: NavItem) => !item.perm || user.perms.includes(item.perm);
+  const admin = NAV_ADMIN.filter(allowed);
 
   return (
     <div className="flex min-h-full">
@@ -56,8 +63,8 @@ export function AppShell({ children, userName }: { children: ReactNode; userName
           {NAV_MAIN.map((item) => (
             <NavLink key={item.href} item={item} active={isActive(item.href)} onClick={close} />
           ))}
-          <div className="px-2.5 pb-1 pt-3.5 text-[11px] tracking-[0.12em] opacity-55">管理</div>
-          {NAV_ADMIN.map((item) => (
+          {admin.length ? <div className="px-2.5 pb-1 pt-3.5 text-[11px] tracking-[0.12em] opacity-55">管理</div> : null}
+          {admin.map((item) => (
             <NavLink key={item.href} item={item} active={isActive(item.href)} onClick={close} />
           ))}
         </nav>
@@ -88,9 +95,16 @@ export function AppShell({ children, userName }: { children: ReactNode; userName
               className="h-9 w-full rounded-lg border border-line bg-surface-2 pl-[34px] pr-3 text-[13.5px] disabled:cursor-not-allowed"
             />
           </div>
-          <div className="ml-auto flex items-center gap-2.5">
-            <span className="hidden rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-bold tracking-wider text-warn sm:inline">開発環境</span>
-            <span className="text-[13px] text-ink-2">{userName}</span>
+          <div className="ml-auto flex items-center gap-3">
+            {process.env.NODE_ENV !== "production" ? <span className="hidden rounded-full bg-warn-soft px-2 py-0.5 text-[11px] font-bold tracking-wider text-warn sm:inline">開発環境</span> : null}
+            <Link href="/settings/password" className="flex items-center gap-2 rounded-md px-1.5 py-1 hover:bg-surface-2" title="パスワードの変更">
+              <Avatar name={user.name} color={user.color} size={26} />
+              <span className="hidden leading-tight sm:block">
+                <span className="block text-[13px] text-ink">{user.name}</span>
+                <span className="block text-[11px] text-muted">{user.roleLabel}</span>
+              </span>
+            </Link>
+            <LogoutButton />
           </div>
         </header>
         <main className="w-full max-w-[1320px] px-4 pb-12 pt-5 lg:px-6">{children}</main>

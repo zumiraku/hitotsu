@@ -1,4 +1,6 @@
-export type NavItem = { href: string; label: string; icon: string; stage?: number };
+import type { Perm } from "@/lib/permissions";
+
+export type NavItem = { href: string; label: string; icon: string; stage?: number; perm?: Perm };
 
 export const NAV_MAIN: NavItem[] = [
   { href: "/", label: "ダッシュボード", icon: "dash" },
@@ -10,7 +12,7 @@ export const NAV_MAIN: NavItem[] = [
 ];
 
 export const NAV_ADMIN: NavItem[] = [
-  { href: "/users", label: "ユーザー・権限", icon: "users", stage: 7 },
-  { href: "/audit", label: "変更履歴", icon: "audit", stage: 7 },
-  { href: "/data", label: "データ入出力", icon: "data", stage: 8 },
+  { href: "/users", label: "ユーザー・権限", icon: "users", perm: "users" },
+  { href: "/audit", label: "変更履歴", icon: "audit", perm: "audit" },
+  { href: "/data", label: "データ入出力", icon: "data", stage: 8, perm: "csv.export" },
 ];
