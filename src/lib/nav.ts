@@ -3,7 +3,7 @@ export type NavItem = { href: string; label: string; icon: string; stage?: numbe
 export const NAV_MAIN: NavItem[] = [
   { href: "/", label: "ダッシュボード", icon: "dash" },
   { href: "/customers", label: "顧客・取引先", icon: "customers" },
-  { href: "/projects", label: "案件", icon: "projects", stage: 3 },
+  { href: "/projects", label: "案件", icon: "projects" },
   { href: "/tasks", label: "タスク", icon: "tasks", stage: 4 },
   { href: "/notes", label: "社内メモ・引き継ぎ", icon: "notes", stage: 5 },
   { href: "/files", label: "ファイル", icon: "files", stage: 6 },
