@@ -9,7 +9,7 @@ const STAGES: { n: number; title: string; done?: boolean; items: string[] }[] = 
   { n: 6, title: "ファイル管理", done: true, items: ["案件・顧客に紐づけたアップロード", "同名ファイルの版管理、ストレージ抽象化"] },
   { n: 7, title: "ユーザー・権限・変更履歴", done: true, items: ["ログイン・招待", "4 ロールの権限を画面と処理の両方で強制", "変更履歴の自動記録"] },
   { n: 8, title: "検索・絞り込み・CSV 入出力", done: true, items: ["横断検索（pg_trgm による日本語の部分一致）", "CSV エクスポート／インポート（自動対応づけ・プレビュー）"] },
-  { n: 9, title: "AI アシスト", items: ["引き継ぎメモの自動下書き", "自然言語での検索"] },
+  { n: 9, title: "AI アシスト", done: true, items: ["引き継ぎメモの自動下書き", "自然言語での検索"] },
   { n: 10, title: "テスト・本番導入", items: ["自動テスト、本番ビルド", "Docker Compose、バックアップ、運用マニュアル"] },
 ];
 
