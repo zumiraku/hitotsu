@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-body), "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+  --font-display: var(--font-display), "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --color-bg: #eef1f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f7fa;
+  --color-surface-3: #e9edf2;
+  --color-line: #d9dfe7;
+  --color-line-strong: #bfc8d3;
+  --color-ink: #18212d;
+  --color-ink-2: #425061;
+  --color-muted: #74818f;
+
+  --color-primary: #1e5b85;
+  --color-primary-strong: #164866;
+  --color-primary-soft: #e1ecf5;
+
+  --color-side: #152a40;
+  --color-side-2: #1b3450;
+  --color-side-active: #2b4c6c;
+  --color-side-text: #c7d3e0;
+
+  --color-good: #1d7f49;
+  --color-good-soft: #dff2e6;
+  --color-warn: #a96a12;
+  --color-warn-soft: #fbeed7;
+  --color-bad: #b93b35;
+  --color-bad-soft: #f9e1df;
+  --color-info: #2a66a8;
+  --color-info-soft: #e2ecf8;
+  --color-violet: #6b4a9e;
+  --color-violet-soft: #ece6f6;
+  --color-neutral: #66727f;
+  --color-neutral-soft: #eaeef2;
+
+  --shadow-card: 0 1px 2px rgba(18, 28, 40, 0.06), 0 6px 20px rgba(18, 28, 40, 0.07);
+  --radius-card: 8px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+  line-height: 1.35;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-line bg-surface;
+  }
+  .card-head {
+    @apply flex items-center justify-between gap-3 border-b border-line px-4 py-3;
+  }
+  .card-body {
+    @apply px-4 py-3.5;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 text-xs font-bold leading-5;
+  }
+  .btn {
+    @apply inline-flex h-[34px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-line bg-surface px-3.5 text-[13.5px] font-bold text-ink hover:bg-surface-2;
+  }
+  .btn-primary {
+    @apply border-primary bg-primary text-white hover:border-primary-strong hover:bg-primary-strong;
+  }
+  .avatar {
+    @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white;
+    font-family: var(--font-display);
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
