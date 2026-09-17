@@ -60,3 +60,11 @@ skills-lock.json
 
 # 一時ファイル
 /.tmp
+
+# テスト
+/storage-test
+!.env.test.example
+!.env.docker.example
+
+# バックアップ
+/backups
