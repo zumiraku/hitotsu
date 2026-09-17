@@ -6,6 +6,7 @@ import { FileList } from "@/components/file-list";
 import { Icon } from "@/components/icons";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { StatusSelect } from "@/components/projects/status-select";
+import { AddTaskButton, TaskRow } from "@/components/tasks/task-row";
 import { Avatar, UserChip } from "@/components/ui/avatar";
 import { Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
@@ -13,6 +14,7 @@ import { db } from "@/lib/db";
 import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
 import { NOTE_CATEGORY_LABEL, PRIORITY_LABEL, isClosed } from "@/lib/labels";
 import { projectAlerts } from "@/lib/project-alerts";
+import { taskInclude, toTaskItem } from "@/lib/task-item";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +32,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       customer: { select: { id: true, name: true, contactName: true, contactTitle: true, tel: true, email: true, note: true } },
       owner: { select: { name: true, color: true } },
       members: { include: { user: { select: { id: true, name: true, color: true } } } },
-      tasks: { include: { assignee: { select: { name: true, color: true } } }, orderBy: [{ done: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }] },
+      tasks: { include: taskInclude, orderBy: [{ done: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] },
       activities: { include: { user: { select: { name: true } } }, orderBy: { occurredAt: "desc" }, take: 50 },
       notes: { include: { author: { select: { name: true } } }, orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] },
       files: { include: { uploader: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
@@ -38,7 +40,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
   });
   if (!p) notFound();
 
-  const logs = await db.auditLog.findMany({ where: { targetType: "project", targetId: id }, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, take: 10 });
+  const [logs, users, projectOptions] = await Promise.all([
+    db.auditLog.findMany({ where: { targetType: "project", targetId: id }, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, take: 10 }),
+    db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.project.findMany({ where: { deletedAt: null, status: { in: ["LEAD", "ACTIVE", "HOLD"] } }, select: { id: true, name: true }, orderBy: { updatedAt: "desc" } }),
+  ]);
+  const taskOptions = { users, projects: projectOptions.some((x) => x.id === p.id) ? projectOptions : [{ id: p.id, name: p.name }, ...projectOptions] };
 
   const closed = isClosed(p.status);
   const openTasks = p.tasks.filter((t) => !t.done);
@@ -92,7 +99,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex flex-col gap-4">
           {p.summary ? (
             <section className="card">
@@ -104,38 +111,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">タスク <span className="ml-1 font-mono text-xs font-normal text-muted">{openTasks.length}/{p.tasks.length}</span></h2>
+              <AddTaskButton options={taskOptions} preset={{ projectId: p.id, assigneeId: p.ownerId ?? "" }} label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
             </div>
             <div className="card-body">
               {p.tasks.length === 0 ? (
                 <Empty>タスクはまだありません</Empty>
               ) : (
-                <ul className="flex flex-col gap-1.5">
-                  {p.tasks.map((t) => {
-                    const n = t.dueDate ? daysLeft(t.dueDate) : null;
-                    return (
-                      <li key={t.id} className="flex items-center gap-2.5 rounded-[7px] border border-line px-3 py-2">
-                        <span className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border ${t.done ? "border-good bg-good text-white" : "border-line-strong bg-surface"}`} aria-label={t.done ? "完了" : "未完了"}>
-                          {t.done ? <Icon name="check" size={12} strokeWidth={2.4} /> : null}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className={`truncate font-bold ${t.done ? "text-muted line-through" : ""}`}>{t.title}</div>
-                          <div className="text-xs text-muted">{t.assignee?.name ?? "未割当"}</div>
-                        </div>
-                        {t.assignee ? <Avatar name={t.assignee.name} color={t.assignee.color} /> : null}
-                        <div className="tnum whitespace-nowrap text-right text-[13px] leading-tight">
-                          {t.done ? <span className="text-muted">完了</span> : t.dueDate ? (
-                            <>
-                              <div className={n !== null && n < 0 ? "text-bad" : ""}>{fmtDate(t.dueDate)}</div>
-                              <div className={`text-[11px] ${n !== null && n < 0 ? "font-bold text-bad" : n !== null && n <= 3 ? "font-bold text-warn" : "text-muted"}`}>{dueLabel(t.dueDate)}</div>
-                            </>
-                          ) : <span className="text-muted">期限なし</span>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="flex flex-col gap-1.5">
+                  {p.tasks.map((t) => (
+                    <TaskRow key={t.id} task={toTaskItem(t)} options={taskOptions} showProject={false} />
+                  ))}
+                </div>
               )}
-              <p className="mt-3 border-t border-dashed border-line pt-3 text-[12.5px] text-muted">タスクの追加・完了操作はステージ4で入れます</p>
             </div>
           </section>
 
