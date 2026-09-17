@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { splitTags } from "@/lib/format";
 
 const text = (max: number) => z.string().trim().max(max, `${max}文字以内で入力してください`);
 
@@ -16,7 +17,7 @@ export const customerSchema = z.object({
   tags: z
     .string()
     .trim()
-    .transform((s) => s.split(/[,、，;]/).map((t) => t.trim()).filter(Boolean))
+    .transform(splitTags)
     .pipe(z.array(z.string().max(20, "タグは20文字以内")).max(10, "タグは10個まで")),
   note: text(2000),
 });

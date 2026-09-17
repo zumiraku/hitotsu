@@ -38,14 +38,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         include: { owner: { select: { name: true, color: true } }, _count: { select: { tasks: { where: { done: false } } } } },
         orderBy: [{ status: "asc" }, { dueDate: "asc" }],
       },
-      files: { include: { uploader: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+      files: { where: { OR: [{ projectId: null }, { project: { deletedAt: null } }] }, include: { uploader: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
     },
   });
   if (!c) notFound();
 
   const [activities, logs, actOptions, notes] = await Promise.all([
     db.activity.findMany({
-      where: { OR: [{ customerId: id }, { project: { customerId: id } }] },
+      where: { OR: [{ customerId: id }, { project: { customerId: id, deletedAt: null } }] },
       include: { user: { select: { name: true } }, project: { select: { id: true, name: true } } },
       orderBy: { occurredAt: "desc" },
       take: 50,
@@ -61,7 +61,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   const projects = [...c.projects].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));
   const projectFiles = await db.file.findMany({
-    where: { project: { customerId: id }, customerId: { not: id } },
+    where: { project: { customerId: id, deletedAt: null }, customerId: { not: id } },
     include: { uploader: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   });

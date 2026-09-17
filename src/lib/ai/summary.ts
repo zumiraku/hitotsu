@@ -1,15 +1,15 @@
 import { db } from "@/lib/db";
 import { daysLeft, daysSince, startOfToday } from "@/lib/format";
+import { liveProject } from "@/lib/scope";
 
 // ダッシュボードの「今日のまとめ」。数字は DB から、文章はルールで組み立てる
 export async function dailySummary(userId: string) {
   const today = startOfToday();
   const utc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-  const live = { OR: [{ projectId: null }, { project: { deletedAt: null } }] };
   const [overdue, todayTasks, mineOverdue, active, soon] = await Promise.all([
-    db.task.count({ where: { done: false, dueDate: { lt: utc }, ...live } }),
-    db.task.count({ where: { done: false, dueDate: utc, ...live } }),
-    db.task.findMany({ where: { done: false, assigneeId: userId, dueDate: { lte: utc }, ...live }, orderBy: { dueDate: "asc" }, take: 1, select: { title: true } }),
+    db.task.count({ where: { done: false, dueDate: { lt: utc }, ...liveProject } }),
+    db.task.count({ where: { done: false, dueDate: utc, ...liveProject } }),
+    db.task.findMany({ where: { done: false, assigneeId: userId, dueDate: { lte: utc }, ...liveProject }, orderBy: { dueDate: "asc" }, take: 1, select: { title: true } }),
     db.project.findMany({ where: { deletedAt: null, status: "ACTIVE" }, include: { customer: { select: { name: true } }, activities: { orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } } } }),
     db.project.findMany({ where: { deletedAt: null, status: { in: ["LEAD", "ACTIVE", "HOLD"] }, dueDate: { gte: utc } }, orderBy: { dueDate: "asc" }, include: { customer: { select: { name: true } } } }),
   ]);

@@ -9,6 +9,7 @@ import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { liveRefs } from "@/lib/scope";
 import { can } from "@/lib/permissions";
 
 export const metadata = { title: "社内メモ・引き継ぎ" };
@@ -26,6 +27,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const pinnedOnly = one(sp.pinned) === "1";
 
   const where: Prisma.NoteWhereInput = {
+    ...liveRefs,
     ...(category ? { category } : {}),
     ...(pinnedOnly ? { pinned: true } : {}),
     ...(q ? { OR: [{ title: { contains: q, mode: "insensitive" } }, { body: { contains: q, mode: "insensitive" } }] } : {}),
@@ -37,7 +39,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       include: { author: { select: { name: true, color: true } }, project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } },
       orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }],
     }),
-    db.note.count(),
+    db.note.count({ where: liveRefs }),
   ]);
 
   return (

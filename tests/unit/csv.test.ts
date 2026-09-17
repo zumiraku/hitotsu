@@ -29,6 +29,10 @@ describe("parseCsv", () => {
 });
 
 describe("toCsv", () => {
+  it("数式として解釈される先頭文字には ' を付ける", () => {
+    expect(toCsv(["a"], [["=1+1"], ["+81"], ["@x"], ["-abc"], ["-100"], ["普通"], [5]])).toBe("a\r\n'=1+1\r\n'+81\r\n'@x\r\n'-abc\r\n-100\r\n普通\r\n5\r\n");
+  });
+
   it("カンマ・引用符・改行を含む値を引用する", () => {
     expect(toCsv(["a", "b"], [["x,y", 'say "hi"'], ["line\nbreak", 12]])).toBe('a,b\r\n"x,y","say ""hi"""\r\n"line\nbreak",12\r\n');
   });

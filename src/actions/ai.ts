@@ -6,12 +6,11 @@ import { draftHandover, type HandoverDraft } from "@/lib/ai/handover";
 import { writeAudit } from "@/lib/audit";
 import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
-import { can } from "@/lib/permissions";
 
 export async function draftHandoverAction(projectId: string): Promise<{ draft?: HandoverDraft; message?: string }> {
   const { user: me, denied } = await requirePerm("activity");
   if (denied) return { message: denied };
-  const draft = await draftHandover(projectId, { authorName: me.name, showAmount: can(me, "amount") });
+  const draft = await draftHandover(projectId, { authorName: me.name });
   if (!draft) return { message: "案件が見つかりません" };
   return { draft };
 }

@@ -8,6 +8,7 @@ import { createTask, toggleTask } from "@/actions/tasks";
 import { changeRole, inviteUser } from "@/actions/users";
 import { db } from "@/lib/db";
 import { DENIED } from "@/lib/permissions";
+import { searchAll } from "@/lib/search";
 import { RedirectError, customerId, fd, lastAudit, loginAs, projectId } from "./helpers";
 
 const customerForm = (name: string) => fd({ name, kana: "", type: "CUSTOMER", industry: "IT", contactName: "", contactTitle: "", tel: "", email: "", address: "", ownerId: "", tags: "テスト", note: "" });
@@ -115,11 +116,17 @@ describe("案件・タスク・対応履歴・メモ", () => {
     expect((await db.note.findUniqueOrThrow({ where: { id: n.id } })).pinned).toBe(true);
   });
 
-  it("案件の削除は論理削除", async () => {
+  it("案件の削除は論理削除。紐づくタスク・メモは検索に出なくなる", async () => {
     await loginAs("takahashi@example.com");
     const pid = await projectId("統合テスト案件");
+    const before = await searchAll({ words: ["統合テスト"] });
+    expect(before.map((g) => g.kind)).toEqual(expect.arrayContaining(["task", "note", "activity"]));
     await expect(deleteProject(pid)).rejects.toThrow(RedirectError);
     expect((await db.project.findUniqueOrThrow({ where: { id: pid } })).deletedAt).not.toBeNull();
+    const after = await searchAll({ words: ["統合テスト"] });
+    expect(after.map((g) => g.kind)).not.toEqual(expect.arrayContaining(["task"]));
+    expect(after.map((g) => g.kind)).not.toEqual(expect.arrayContaining(["note"]));
+    expect(after.map((g) => g.kind)).not.toEqual(expect.arrayContaining(["activity"]));
   });
 });
 

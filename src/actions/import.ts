@@ -7,6 +7,7 @@ import { nextCustomerCode, nextProjectCode } from "@/lib/codes";
 import { IMPORT_LABEL, type ImportKind } from "@/lib/csv";
 import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { splitTags } from "@/lib/format";
 import { CUSTOMER_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "@/lib/labels";
 import { customerSchema } from "@/lib/schemas/customer";
 import { normalizeAmount } from "@/lib/schemas/project";
@@ -34,8 +35,6 @@ function byLabel<T extends string>(labels: Record<T, string>, s: string): T | nu
   const hit = (Object.entries(labels) as [T, string][]).find(([k, l]) => l === t || k === t.toUpperCase());
   return hit ? hit[0] : null;
 }
-
-const splitTags = (s: string) => s.split(/[,、，;]/).map((x) => x.trim()).filter(Boolean);
 
 export async function importRows(kind: ImportKind, rows: ImportRow[], options: { skipErrors?: boolean; createCustomers?: boolean } = {}): Promise<ImportResult> {
   const { user: me, denied } = await requirePerm("csv.import");

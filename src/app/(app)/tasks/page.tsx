@@ -8,6 +8,7 @@ import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { endOfWeek, startOfToday } from "@/lib/format";
 import { can } from "@/lib/permissions";
+import { liveProject } from "@/lib/scope";
 import { taskInclude, toTaskItem } from "@/lib/task-item";
 
 export const metadata = { title: "タスク" };
@@ -29,7 +30,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const utc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
   const where: Prisma.TaskWhereInput = {
-    OR: [{ projectId: null }, { project: { deletedAt: null } }],
+    ...liveProject,
     ...(assignee ? { assigneeId: assignee } : {}),
     ...(project ? { projectId: project } : {}),
     ...(dueParam
@@ -49,8 +50,8 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     db.task.findMany({ where, include: taskInclude, orderBy: [{ done: "asc" }, { dueDate: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }] }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     db.project.findMany({ where: { deletedAt: null, status: { in: ["LEAD", "ACTIVE", "HOLD"] } }, select: { id: true, name: true }, orderBy: { updatedAt: "desc" } }),
-    db.task.count({ where: { done: false, OR: [{ projectId: null }, { project: { deletedAt: null } }] } }),
-    db.task.count({ where: { done: false, dueDate: { lt: utc(today) }, OR: [{ projectId: null }, { project: { deletedAt: null } }] } }),
+    db.task.count({ where: { done: false, ...liveProject } }),
+    db.task.count({ where: { done: false, dueDate: { lt: utc(today) }, ...liveProject } }),
   ]);
 
   const items = tasks.map(toTaskItem);

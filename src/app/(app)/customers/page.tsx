@@ -81,7 +81,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const ids = customers.map((c) => c.id);
   const activities = ids.length
     ? await db.activity.findMany({
-        where: { OR: [{ customerId: { in: ids } }, { project: { customerId: { in: ids } } }] },
+        where: { OR: [{ customerId: { in: ids } }, { project: { customerId: { in: ids }, deletedAt: null } }] },
         orderBy: { occurredAt: "desc" },
         select: { customerId: true, occurredAt: true, type: true, project: { select: { customerId: true } } },
         take: 500,

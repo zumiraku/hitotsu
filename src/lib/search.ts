@@ -2,6 +2,7 @@ import type { ProjectStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import { dueLabel, endOfWeek, fileSize, fmtDate, fmtMD, startOfToday } from "@/lib/format";
 import { ACTIVITY_LABEL, NOTE_CATEGORY_LABEL, STATUS_LABEL } from "@/lib/labels";
+import { liveProject, liveRefs } from "@/lib/scope";
 
 export type SearchKind = "customer" | "project" | "task" | "note" | "file" | "activity";
 export type SearchHit = { id: string; kind: SearchKind; title: string; sub: string; href: string };
@@ -93,7 +94,7 @@ export async function searchAll(f: SearchFilters, opts: { limit?: number } = {})
   if (want("task")) {
     const projectCond = { ...(f.customerId ? { customerId: f.customerId } : {}), ...(f.status ? { status: f.status } : {}) };
     const where = {
-      OR: [{ projectId: null }, { project: { deletedAt: null } }],
+      ...liveProject,
       ...(f.assigneeId ? { assigneeId: f.assigneeId } : {}),
       ...(Object.keys(projectCond).length ? { project: projectCond } : {}),
       ...(due ? { dueDate: due, done: false } : hasFilter ? { done: false } : {}),
@@ -110,7 +111,7 @@ export async function searchAll(f: SearchFilters, opts: { limit?: number } = {})
     const where = {
       ...(f.assigneeId ? { authorId: f.assigneeId } : {}),
       ...(f.customerId ? { OR: [{ customerId: f.customerId }, { project: { customerId: f.customerId } }] } : {}),
-      AND: wordsAnd((w) => ({ OR: [{ title: ci(w) }, { body: ci(w) }] })),
+      AND: [...liveRefs.AND, ...wordsAnd((w) => ({ OR: [{ title: ci(w) }, { body: ci(w) }] }))],
     };
     const [rows, total] = await Promise.all([db.note.findMany({ where, take: limit, orderBy: [{ pinned: "desc" }, { updatedAt: "desc" }], include: { author: { select: { name: true } } } }), db.note.count({ where })]);
     if (total) groups.push({ kind: "note", label: KIND_LABEL.note, total, hits: rows.map((n) => ({ id: n.id, kind: "note", title: n.title, sub: [NOTE_CATEGORY_LABEL[n.category], n.author?.name, n.body.split("\n")[0].slice(0, 60)].filter(Boolean).join(" · "), href: `/notes#note-${n.id}` })) });
@@ -118,10 +119,9 @@ export async function searchAll(f: SearchFilters, opts: { limit?: number } = {})
 
   if (want("file") && !timeOrStatus) {
     const where = {
-      OR: [{ projectId: null }, { project: { deletedAt: null } }],
       ...(f.assigneeId ? { uploaderId: f.assigneeId } : {}),
       ...(f.customerId ? { customerId: f.customerId } : {}),
-      AND: wordsAnd((w) => ({ OR: [{ name: ci(w) }, { project: { name: ci(w) } }, { customer: { name: ci(w) } }] })),
+      AND: [...liveRefs.AND, ...wordsAnd((w) => ({ OR: [{ name: ci(w) }, { project: { name: ci(w) } }, { customer: { name: ci(w) } }] }))],
     };
     const [rows, total] = await Promise.all([db.file.findMany({ where, take: limit, orderBy: { createdAt: "desc" }, include: { project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } } }), db.file.count({ where })]);
     if (total) groups.push({ kind: "file", label: KIND_LABEL.file, total, hits: rows.map((x) => ({ id: x.id, kind: "file", title: x.name, sub: [`v${x.version}`, fileSize(x.size), x.project?.name ?? x.customer?.name].filter(Boolean).join(" · "), href: x.project ? `/projects/${x.project.id}` : x.customer ? `/customers/${x.customer.id}` : "/files" })) });
@@ -131,7 +131,7 @@ export async function searchAll(f: SearchFilters, opts: { limit?: number } = {})
     const where = {
       ...(f.assigneeId ? { userId: f.assigneeId } : {}),
       ...(f.customerId ? { OR: [{ customerId: f.customerId }, { project: { customerId: f.customerId } }] } : {}),
-      AND: wordsAnd((w) => ({ OR: [{ body: ci(w) }, { project: { name: ci(w) } }, { customer: { name: ci(w) } }] })),
+      AND: [...liveRefs.AND, ...wordsAnd((w) => ({ OR: [{ body: ci(w) }, { project: { name: ci(w) } }, { customer: { name: ci(w) } }] }))],
     };
     const [rows, total] = await Promise.all([
       db.activity.findMany({ where, take: limit, orderBy: { occurredAt: "desc" }, include: { user: { select: { name: true } }, project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } } }),
