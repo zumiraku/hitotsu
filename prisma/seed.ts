@@ -22,6 +22,7 @@ function date(offset: number) {
 }
 
 async function main() {
+  await db.session.deleteMany();
   await db.auditLog.deleteMany();
   await db.file.deleteMany();
   await db.note.deleteMany();

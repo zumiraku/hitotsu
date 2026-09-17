@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { BIZ_UDPGothic, Zen_Kaku_Gothic_New } from "next/font/google";
-import { AppShell } from "@/components/app-shell";
 import "./globals.css";
 
 const body = BIZ_UDPGothic({
@@ -25,10 +24,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ja" className={`${body.variable} ${display.variable} h-full`}>
-      <body className="min-h-full">
-        {/* ログインはステージ7で入れる。それまでは固定ユーザー表示 */}
-        <AppShell userName="高橋 美咲">{children}</AppShell>
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
