@@ -68,3 +68,10 @@ export function daysSince(d: Date) {
 export function daysAgo(n: number) {
   return new Date(Date.now() - n * DAY);
 }
+
+// <input type="date"> 用
+export function toInputDate(d: Date | null | undefined) {
+  if (!d) return "";
+  const x = dateOnly(d);
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+}

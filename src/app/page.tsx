@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { db } from "@/lib/db";
 import { ACTIVITY_LABEL, STATUS_CLASS, STATUS_COLOR, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
-import { WEEKDAY, ago, daysAgo, daysLeft, daysSince, dueLabel, endOfWeek, fmtDate, fmtDateTime, startOfToday } from "@/lib/format";
+import { WEEKDAY, ago, daysLeft, dueLabel, endOfWeek, fmtDate, fmtDateTime, startOfToday } from "@/lib/format";
+import { projectAlerts } from "@/lib/project-alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,6 @@ function Kpi({ label, value, hint, tone, href }: { label: string; value: number;
 export default async function DashboardPage() {
   const today = startOfToday();
   const weekEnd = endOfWeek();
-  const staleBefore = daysAgo(14);
 
   const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities] = await Promise.all([
     db.project.findMany({
@@ -66,17 +66,7 @@ export default async function DashboardPage() {
   const thisWeek = openTasks.filter((t) => t.dueDate && daysLeft(t.dueDate) >= 0 && t.dueDate <= weekEnd);
 
   const attention = projects
-    .map((p) => {
-      const reasons: { level: "bad" | "warn"; text: string }[] = [];
-      if (p.tasks.length) reasons.push({ level: "bad", text: `期限超過のタスク ${p.tasks.length}件` });
-      if (p.dueDate && daysLeft(p.dueDate) < 0) reasons.push({ level: "bad", text: `納期を${-daysLeft(p.dueDate)}日超過` });
-      const last = p.activities[0]?.occurredAt;
-      if (p.status === "ACTIVE" && (!last || last < staleBefore)) {
-        reasons.push({ level: "warn", text: last ? `最終対応から${daysSince(last)}日経過` : "対応履歴なし" });
-      }
-      if (p.status === "HOLD") reasons.push({ level: "warn", text: "保留中：再開時期を確認" });
-      return { p, reasons };
-    })
+    .map((p) => ({ p, reasons: projectAlerts({ status: p.status, dueDate: p.dueDate, overdueTasks: p.tasks.length, lastActivityAt: p.activities[0]?.occurredAt ?? null }) }))
     .filter((x) => x.reasons.length);
 
   const total = statusCounts.reduce((s, c) => s + c._count._all, 0);
@@ -128,7 +118,7 @@ export default async function DashboardPage() {
                     <li key={p.id} className="flex items-center gap-2.5 py-2.5">
                       {p.owner ? <Avatar name={p.owner.name} color={p.owner.color} /> : null}
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-bold">{p.name}</div>
+                        <Link href={`/projects/${p.id}`} className="block truncate font-bold hover:underline">{p.name}</Link>
                         <div className="truncate text-xs text-muted">
                           {p.customer.name} · {reasons.map((r) => r.text).join(" / ")}
                         </div>
@@ -154,7 +144,7 @@ export default async function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-bold">{t.title}</div>
                       <div className="truncate text-xs text-muted">
-                        {t.project ? t.project.name + " · " : ""}
+                        {t.project ? <><Link href={`/projects/${t.project.id}`} className="hover:underline">{t.project.name}</Link> · </> : null}
                         {t.assignee?.name ?? "未割当"}
                       </div>
                     </div>
@@ -225,7 +215,7 @@ export default async function DashboardPage() {
                         <span>{fmtDateTime(a.occurredAt)}</span>
                       </div>
                       <div className="mt-0.5 line-clamp-2">
-                        {a.project ? <span className="text-primary">{a.project.name}　</span> : a.customer ? <span className="text-primary">{a.customer.name}　</span> : null}
+                        {a.project ? <Link href={`/projects/${a.project.id}`} className="text-primary hover:underline">{a.project.name}</Link> : a.customer ? <Link href={`/customers/${a.customer.id}`} className="text-primary hover:underline">{a.customer.name}</Link> : null}{a.project || a.customer ? "　" : ""}
                         {a.body}
                       </div>
                     </div>
