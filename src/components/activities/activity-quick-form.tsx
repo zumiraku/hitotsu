@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
-import { createActivity } from "@/app/activities/actions";
+import { createActivity } from "@/actions/activities";
 import { inputBase, textareaClass } from "@/components/ui/field";
 import { localNow } from "@/lib/format";
 import { ACTIVITY_LABEL } from "@/lib/labels";

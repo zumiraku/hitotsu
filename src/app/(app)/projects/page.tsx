@@ -12,7 +12,9 @@ import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { SortHeader } from "@/components/ui/sort-header";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 import { daysLeft, dueLabel, fmtDate, yen } from "@/lib/format";
 import { PRIORITY_LABEL, STATUS_ORDER, isClosed } from "@/lib/labels";
 import { projectAlerts } from "@/lib/project-alerts";
@@ -36,6 +38,7 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const me = await currentUser();
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const statusParam = one(sp.status);
@@ -129,7 +132,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   return (
     <div>
       <PageHeader title="案件" sub={`${total}件${filtering ? "（絞り込み中）" : ""}`}>
-        <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link>
+        {can(me, "edit") ? <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link> : null}
       </PageHeader>
       <Suspense>
         <Flash messages={{ deleted: "削除しました" }} />
@@ -137,7 +140,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       </Suspense>
 
       {view === "board" ? (
-        <Board cards={cards} />
+        <Board cards={cards} canDrag={can(me, "edit")} />
       ) : (
         <>
           <div className="card overflow-x-auto">
@@ -150,7 +153,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                   <SortHeader label="優先度" field="priority" {...sortProps} />
                   <SortHeader label="担当" field="owner" {...sortProps} />
                   <SortHeader label="納期" field="due" {...sortProps} />
-                  <SortHeader label="金額" field="amount" {...sortProps} className="text-right" />
+                  {can(me, "amount") ? <SortHeader label="金額" field="amount" {...sortProps} className="text-right" /> : null}
                   <th className="th text-right">タスク</th>
                   <th className="th"></th>
                 </tr>
@@ -185,7 +188,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                             </span>
                           )}
                         </td>
-                        <td className="td tnum text-right">{yen(p.amount)}</td>
+                        {can(me, "amount") ? <td className="td tnum text-right">{yen(p.amount)}</td> : null}
                         <td className="td tnum text-right whitespace-nowrap">{p.open}<span className="text-xs text-muted">/{p.tasks.length}</span></td>
                         <td className="td">
                           {p.alerts.length ? (

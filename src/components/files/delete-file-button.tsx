@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { deleteFile } from "@/app/files/actions";
+import { deleteFile } from "@/actions/files";
 import { Icon } from "@/components/icons";
 
 export function DeleteFileButton({ id, name, version }: { id: string; name: string; version: number }) {

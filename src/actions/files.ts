@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { resolveFileTarget } from "@/lib/files";
 import { storage } from "@/lib/storage";
 
 export async function deleteFile(id: string): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("file");
+  if (denied) return { message: denied };
   const f = await db.file.findUnique({ where: { id } });
   if (!f) return { message: "このファイルはすでに削除されています" };
   const target = await resolveFileTarget(f.projectId, f.projectId ? null : f.customerId);

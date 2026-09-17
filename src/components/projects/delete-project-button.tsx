@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { deleteProject } from "@/app/projects/actions";
+import { deleteProject } from "@/actions/projects";
 
 export function DeleteProjectButton({ id, name }: { id: string; name: string }) {
   const [pending, start] = useTransition();

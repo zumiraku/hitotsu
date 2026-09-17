@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { ProjectStatus } from "@/generated/prisma/enums";
 import { diffChanges, writeAudit } from "@/lib/audit";
 import { nextProjectCode } from "@/lib/codes";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { fmtDate, yen } from "@/lib/format";
 import { PRIORITY_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
@@ -34,7 +34,8 @@ function revalidate(id?: string) {
 export async function createProject(_prev: ProjectFormState, formData: FormData): Promise<ProjectFormState> {
   const parsed = parseProjectForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("edit");
+  if (denied) return { message: denied };
   const { memberIds, ...rest } = parsed.data;
   const ownerId = rest.ownerId || null;
   const customer = await db.customer.findFirst({ where: { id: rest.customerId, deletedAt: null }, select: { id: true } });
@@ -61,7 +62,8 @@ export async function createProject(_prev: ProjectFormState, formData: FormData)
 export async function updateProject(id: string, _prev: ProjectFormState, formData: FormData): Promise<ProjectFormState> {
   const parsed = parseProjectForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("edit");
+  if (denied) return { message: denied };
   const before = await db.project.findFirst({ where: { id, deletedAt: null }, include: { members: { select: { userId: true } }, customer: { select: { name: true } } } });
   if (!before) return { message: "この案件はすでに削除されています" };
 
@@ -107,7 +109,8 @@ export async function updateProject(id: string, _prev: ProjectFormState, formDat
 
 export async function changeProjectStatus(id: string, status: ProjectStatus): Promise<{ message?: string }> {
   if (!STATUS_ORDER.includes(status)) return { message: "不正なステータスです" };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("edit");
+  if (denied) return { message: denied };
   const p = await db.project.findFirst({ where: { id, deletedAt: null }, select: { name: true, status: true } });
   if (!p) return { message: "この案件はすでに削除されています" };
   if (p.status === status) return {};
@@ -129,7 +132,8 @@ export async function changeProjectStatus(id: string, status: ProjectStatus): Pr
 }
 
 export async function deleteProject(id: string): Promise<{ message: string } | undefined> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("delete");
+  if (denied) return { message: denied };
   const p = await db.project.findFirst({ where: { id, deletedAt: null }, select: { name: true } });
   if (!p) return { message: "この案件はすでに削除されています" };
 

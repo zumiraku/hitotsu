@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import type { ProjectFormState } from "@/app/projects/actions";
+import type { ProjectFormState } from "@/actions/projects";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { PRIORITY_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 
@@ -27,9 +27,10 @@ type Props = {
   users: { id: string; name: string }[];
   submitLabel: string;
   cancelHref: string;
+  showAmount?: boolean;
 };
 
-export function ProjectForm({ action, initial, customers, users, submitLabel, cancelHref }: Props) {
+export function ProjectForm({ action, initial, customers, users, submitLabel, cancelHref, showAmount = true }: Props) {
   const [state, formAction, pending] = useActionState(action, null);
   const v = (key: keyof Initial) => state?.values?.[key] ?? initial[key];
   const err = (key: keyof Initial) => state?.errors?.[key];
@@ -74,9 +75,13 @@ export function ProjectForm({ action, initial, customers, users, submitLabel, ca
             ))}
           </select>
         </Field>
-        <Field label="金額（円・税込）" htmlFor="amount" errors={err("amount")}>
-          <input id="amount" name="amount" inputMode="numeric" defaultValue={v("amount")} className={`${inputClass} tnum`} aria-invalid={invalid("amount")} placeholder="例：1,200,000" />
-        </Field>
+        {showAmount ? (
+          <Field label="金額（円・税込）" htmlFor="amount" errors={err("amount")}>
+            <input id="amount" name="amount" inputMode="numeric" defaultValue={v("amount")} className={`${inputClass} tnum`} aria-invalid={invalid("amount")} placeholder="例：1,200,000" />
+          </Field>
+        ) : (
+          <input type="hidden" name="amount" value={initial.amount} />
+        )}
         <Field label="開始日" htmlFor="startDate" errors={err("startDate")}>
           <input id="startDate" name="startDate" type="date" defaultValue={v("startDate")} className={inputClass} aria-invalid={invalid("startDate")} />
         </Field>

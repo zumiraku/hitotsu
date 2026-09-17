@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import type { CustomerFormState } from "@/app/customers/actions";
+import type { CustomerFormState } from "@/actions/customers";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { CUSTOMER_TYPE_LABEL } from "@/lib/labels";
 

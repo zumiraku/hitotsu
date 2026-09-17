@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
-import { createActivity, deleteActivity, updateActivity } from "@/app/activities/actions";
+import { createActivity, deleteActivity, updateActivity } from "@/actions/activities";
 import { ActivityDialog, type ActivityInitial, type ActivityOptions } from "@/components/activities/activity-dialog";
 import { Icon } from "@/components/icons";
 

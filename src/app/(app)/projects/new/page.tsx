@@ -1,20 +1,23 @@
 import Link from "next/link";
-import { createProject } from "@/app/projects/actions";
+import { createProject } from "@/actions/projects";
 import { ProjectForm } from "@/components/projects/project-form";
+import { Forbidden } from "@/components/forbidden";
 import { PageHeader } from "@/components/ui/page-header";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { toInputDate } from "@/lib/format";
+import { can } from "@/lib/permissions";
 
 export const metadata = { title: "案件を追加" };
 export const dynamic = "force-dynamic";
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ customer?: string }> }) {
   const { customer } = await searchParams;
-  const [customers, users, me] = await Promise.all([
+  const me = await currentUser();
+  if (!can(me, "edit")) return <Forbidden title="案件を追加" need="一般以上" />;
+  const [customers, users] = await Promise.all([
     db.customer.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { kana: "asc" } }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    currentUser(),
   ]);
   const preset = customers.find((c) => c.id === customer);
   return (
@@ -28,6 +31,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
         customers={customers}
         users={users}
         submitLabel="追加する"
+        showAmount={can(me, "amount")}
         cancelHref={preset ? `/customers/${preset.id}` : "/projects"}
         initial={{ name: "", customerId: preset?.id ?? "", status: "LEAD", priority: "MID", ownerId: me.id, memberIds: "", amount: "", startDate: toInputDate(new Date()), dueDate: "", summary: "", tags: "" }}
       />

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { writeAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { ACTIVITY_LABEL } from "@/lib/labels";
 import { parseActivityForm, type ActivityFieldErrors } from "@/lib/schemas/activity";
@@ -37,7 +37,8 @@ async function target(projectId: string | null, customerId: string | null) {
 export async function createActivity(_prev: ActivityFormState, formData: FormData): Promise<ActivityFormState> {
   const parsed = parseActivityForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const t = await target(parsed.data.projectId || null, parsed.data.customerId || null);
   if (!t) return { message: "案件または顧客が見つかりません", values: parsed.raw };
 
@@ -63,7 +64,8 @@ export async function createActivity(_prev: ActivityFormState, formData: FormDat
 export async function updateActivity(id: string, _prev: ActivityFormState, formData: FormData): Promise<ActivityFormState> {
   const parsed = parseActivityForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const before = await db.activity.findUnique({ where: { id } });
   if (!before) return { message: "この対応履歴はすでに削除されています" };
   const t = await target(parsed.data.projectId || null, parsed.data.customerId || null);
@@ -94,7 +96,8 @@ export async function updateActivity(id: string, _prev: ActivityFormState, formD
 }
 
 export async function deleteActivity(id: string): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const a = await db.activity.findUnique({ where: { id } });
   if (!a) return { message: "この対応履歴はすでに削除されています" };
   const t = await target(a.projectId, a.customerId);

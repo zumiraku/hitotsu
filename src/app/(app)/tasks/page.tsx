@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { endOfWeek, startOfToday } from "@/lib/format";
+import { can } from "@/lib/permissions";
 import { taskInclude, toTaskItem } from "@/lib/task-item";
 
 export const metadata = { title: "タスク" };
@@ -68,7 +69,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader title="タスク" sub={`未完了 ${openCount}件 · 期限超過 ${overdueCount}件`}>
-        <AddTaskButton options={options} preset={{ assigneeId: me.id }} />
+        {can(me, "activity") ? <AddTaskButton options={options} preset={{ assigneeId: me.id }} /> : null}
       </PageHeader>
       <Suspense>
         <TaskFilters users={users} projects={projects} />
@@ -85,7 +86,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
             </h2>
             <div className="flex flex-col gap-1.5">
               {g.items.map((t) => (
-                <TaskRow key={t.id} task={t} options={options} />
+                <TaskRow key={t.id} task={t} options={can(me, "activity") ? options : undefined} readOnly={!can(me, "activity")} />
               ))}
             </div>
           </section>

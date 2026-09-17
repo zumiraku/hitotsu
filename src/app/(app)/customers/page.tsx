@@ -10,7 +10,9 @@ import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { SortHeader } from "@/components/ui/sort-header";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 import { ago } from "@/lib/format";
 import { ACTIVITY_LABEL } from "@/lib/labels";
 
@@ -33,6 +35,7 @@ type Search = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const me = await currentUser();
   const sp = await searchParams;
   const q = one(sp.q).trim();
   const type = TYPES.has(one(sp.type)) ? (one(sp.type) as CustomerType) : undefined;
@@ -107,7 +110,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   return (
     <div>
       <PageHeader title="顧客・取引先" sub={`${total}件${q || type || owner ? "（絞り込み中）" : ""}`}>
-        <Link href="/customers/new" className="btn btn-primary">＋ 新規追加</Link>
+        {can(me, "edit") ? <Link href="/customers/new" className="btn btn-primary">＋ 新規追加</Link> : null}
       </PageHeader>
       <Suspense>
         <Flash messages={{ deleted: "削除しました" }} />

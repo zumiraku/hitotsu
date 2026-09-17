@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateProject } from "@/app/projects/actions";
+import { updateProject } from "@/actions/projects";
 import { ProjectForm } from "@/components/projects/project-form";
+import { Forbidden } from "@/components/forbidden";
 import { PageHeader } from "@/components/ui/page-header";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { toInputDate } from "@/lib/format";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await currentUser();
+  if (!can(me, "edit")) return <Forbidden title="案件を編集" need="一般以上" />;
   const [p, customers, users] = await Promise.all([
     db.project.findFirst({ where: { id, deletedAt: null }, include: { members: { select: { userId: true } } } }),
     db.customer.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { kana: "asc" } }),
@@ -34,6 +39,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
         customers={customers}
         users={users}
         submitLabel="保存する"
+        showAmount={can(me, "amount")}
         cancelHref={`/projects/${p.id}`}
         initial={{
           name: p.name,

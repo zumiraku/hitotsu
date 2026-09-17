@@ -1,18 +1,19 @@
 import Link from "next/link";
-import { createCustomer } from "@/app/customers/actions";
+import { createCustomer } from "@/actions/customers";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { PageHeader } from "@/components/ui/page-header";
+import { Forbidden } from "@/components/forbidden";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 
 export const metadata = { title: "顧客・取引先を追加" };
 export const dynamic = "force-dynamic";
 
 export default async function NewCustomerPage() {
-  const [users, me] = await Promise.all([
-    db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    currentUser(),
-  ]);
+  const me = await currentUser();
+  if (!can(me, "edit")) return <Forbidden title="顧客・取引先を追加" need="一般以上" />;
+  const users = await db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/customers" className="mb-2 inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink">

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { NoteCategory } from "@/generated/prisma/enums";
 import { diffChanges, writeAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { NOTE_CATEGORY_LABEL } from "@/lib/labels";
 import { parseNoteForm, type NoteFieldErrors } from "@/lib/schemas/note";
@@ -31,7 +31,8 @@ async function resolveLinks(projectId: string, customerId: string) {
 export async function createNote(_prev: NoteFormState, formData: FormData): Promise<NoteFormState> {
   const parsed = parseNoteForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const links = await resolveLinks(parsed.data.projectId, parsed.data.customerId);
 
   const note = await db.$transaction(async (tx) => {
@@ -56,7 +57,8 @@ export async function createNote(_prev: NoteFormState, formData: FormData): Prom
 export async function updateNote(id: string, _prev: NoteFormState, formData: FormData): Promise<NoteFormState> {
   const parsed = parseNoteForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const before = await db.note.findUnique({ where: { id }, include: { project: { select: { name: true } }, customer: { select: { name: true } } } });
   if (!before) return { message: "このメモはすでに削除されています" };
   const links = await resolveLinks(parsed.data.projectId, parsed.data.customerId);
@@ -82,7 +84,8 @@ export async function updateNote(id: string, _prev: NoteFormState, formData: For
 }
 
 export async function togglePin(id: string, pinned: boolean): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const n = await db.note.findUnique({ where: { id }, select: { title: true, pinned: true, projectId: true, customerId: true } });
   if (!n) return { message: "このメモはすでに削除されています" };
   if (n.pinned === pinned) return {};
@@ -95,7 +98,8 @@ export async function togglePin(id: string, pinned: boolean): Promise<{ message?
 }
 
 export async function deleteNote(id: string): Promise<{ message?: string }> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("activity");
+  if (denied) return { message: denied };
   const n = await db.note.findUnique({ where: { id }, select: { title: true, projectId: true, customerId: true } });
   if (!n) return { message: "このメモはすでに削除されています" };
   await db.$transaction(async (tx) => {

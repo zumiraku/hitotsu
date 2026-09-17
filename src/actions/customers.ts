@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { diffChanges, writeAudit } from "@/lib/audit";
 import { nextCustomerCode } from "@/lib/codes";
-import { currentUser } from "@/lib/current-user";
+import { requirePerm } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { CUSTOMER_TYPE_LABEL } from "@/lib/labels";
 import { parseCustomerForm, type CustomerFieldErrors } from "@/lib/schemas/customer";
@@ -24,7 +24,8 @@ async function userName(id: string | null | undefined) {
 export async function createCustomer(_prev: CustomerFormState, formData: FormData): Promise<CustomerFormState> {
   const parsed = parseCustomerForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("edit");
+  if (denied) return { message: denied };
   const data = { ...parsed.data, ownerId: parsed.data.ownerId || null };
 
   const created = await db.$transaction(async (tx) => {
@@ -41,7 +42,8 @@ export async function createCustomer(_prev: CustomerFormState, formData: FormDat
 export async function updateCustomer(id: string, _prev: CustomerFormState, formData: FormData): Promise<CustomerFormState> {
   const parsed = parseCustomerForm(formData);
   if (!parsed.ok) return { errors: parsed.errors, values: parsed.raw };
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("edit");
+  if (denied) return { message: denied };
   const before = await db.customer.findFirst({ where: { id, deletedAt: null } });
   if (!before) return { message: "この顧客はすでに削除されています" };
 
@@ -76,7 +78,8 @@ export async function updateCustomer(id: string, _prev: CustomerFormState, formD
 }
 
 export async function deleteCustomer(id: string): Promise<{ message: string } | undefined> {
-  const me = await currentUser();
+  const { user: me, denied } = await requirePerm("delete");
+  if (denied) return { message: denied };
   const target = await db.customer.findFirst({
     where: { id, deletedAt: null },
     include: { _count: { select: { projects: { where: { deletedAt: null } } } } },

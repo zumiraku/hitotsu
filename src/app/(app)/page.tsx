@@ -10,6 +10,7 @@ import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday, toInputDate } from "@/lib/format";
 import { ACTIVITY_LABEL, STATUS_COLOR, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
+import { can } from "@/lib/permissions";
 import { projectAlerts } from "@/lib/project-alerts";
 import { taskInclude, toTaskItem } from "@/lib/task-item";
 
@@ -107,8 +108,8 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link>
-          <AddActivityButton options={actOptions} />
+          {can(me, "edit") ? <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link> : null}
+          {can(me, "activity") ? <AddActivityButton options={actOptions} /> : null}
         </div>
       </div>
 
@@ -128,7 +129,7 @@ export default async function DashboardPage() {
               <Link href="/tasks" className="text-xs text-primary">すべて見る</Link>
             </div>
             <div className="card-body flex flex-col gap-1.5">
-              {focus.length === 0 ? <p className="py-4 text-center text-[13px] text-muted">3日以内に期限を迎えるタスクはありません</p> : focus.slice(0, 8).map((t) => <TaskRow key={t.id} task={toTaskItem(t)} />)}
+              {focus.length === 0 ? <p className="py-4 text-center text-[13px] text-muted">3日以内に期限を迎えるタスクはありません</p> : focus.slice(0, 8).map((t) => <TaskRow key={t.id} task={toTaskItem(t)} readOnly={!can(me, "activity")} />)}
               {focus.length > 8 ? <Link href="/tasks" className="mt-1 text-center text-xs text-primary">残り{focus.length - 8}件を見る</Link> : null}
             </div>
           </section>

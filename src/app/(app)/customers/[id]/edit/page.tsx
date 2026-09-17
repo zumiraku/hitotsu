@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateCustomer } from "@/app/customers/actions";
+import { updateCustomer } from "@/actions/customers";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { PageHeader } from "@/components/ui/page-header";
+import { Forbidden } from "@/components/forbidden";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await currentUser();
+  if (!can(me, "edit")) return <Forbidden title="顧客・取引先を編集" need="一般以上" />;
   const [c, users] = await Promise.all([
     db.customer.findFirst({ where: { id, deletedAt: null } }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),

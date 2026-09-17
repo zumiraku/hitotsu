@@ -11,10 +11,12 @@ import { DeleteProjectButton } from "@/components/projects/delete-project-button
 import { StatusSelect } from "@/components/projects/status-select";
 import { AddTaskButton, TaskRow } from "@/components/tasks/task-row";
 import { Avatar, UserChip } from "@/components/ui/avatar";
-import { Tag } from "@/components/ui/badge";
+import { StatusBadge, Tag } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
 import { activityOptions } from "@/lib/activity-options";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 import { daysLeft, dueLabel, fmtDate, fmtDateTime, yen } from "@/lib/format";
 import { PRIORITY_LABEL, isClosed } from "@/lib/labels";
 import { projectAlerts } from "@/lib/project-alerts";
@@ -30,6 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await currentUser();
   const p = await db.project.findFirst({
     where: { id, deletedAt: null },
     include: {
@@ -68,7 +71,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <div className="font-mono text-xs text-muted">{p.code}</div>
           <h1 className="mb-1.5 mt-0.5 text-[22px] font-bold">{p.name}</h1>
           <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-ink-2">
-            <StatusSelect id={p.id} status={p.status} />
+            {can(me, "edit") ? <StatusSelect id={p.id} status={p.status} /> : <StatusBadge status={p.status} />}
             <span>
               <span className={`mr-1.5 inline-block h-2 w-2 rounded-[2px] align-middle ${p.priority === "HIGH" ? "bg-bad" : p.priority === "MID" ? "bg-warn" : "bg-neutral"}`} />
               優先度 {PRIORITY_LABEL[p.priority]}
@@ -88,8 +91,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/projects/${p.id}/edit`} className="btn">編集</Link>
-          <DeleteProjectButton id={p.id} name={p.name} />
+          {can(me, "edit") ? <Link href={`/projects/${p.id}/edit`} className="btn">編集</Link> : null}
+          {can(me, "delete") ? <DeleteProjectButton id={p.id} name={p.name} /> : null}
         </div>
       </div>
 
@@ -116,7 +119,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">タスク <span className="ml-1 font-mono text-xs font-normal text-muted">{openTasks.length}/{p.tasks.length}</span></h2>
-              <AddTaskButton options={taskOptions} preset={{ projectId: p.id, assigneeId: p.ownerId ?? "" }} label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
+              {can(me, "activity") ? <AddTaskButton options={taskOptions} preset={{ projectId: p.id, assigneeId: p.ownerId ?? "" }} label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" /> : null}
             </div>
             <div className="card-body">
               {p.tasks.length === 0 ? (
@@ -124,7 +127,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {p.tasks.map((t) => (
-                    <TaskRow key={t.id} task={toTaskItem(t)} options={taskOptions} showProject={false} />
+                    <TaskRow key={t.id} task={toTaskItem(t)} options={can(me, "activity") ? taskOptions : undefined} readOnly={!can(me, "activity")} showProject={false} />
                   ))}
                 </div>
               )}
@@ -136,18 +139,20 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <h2 className="text-[15px] font-bold">対応履歴 <span className="ml-1 font-mono text-xs font-normal text-muted">{p.activities.length}</span></h2>
             </div>
             <div className="card-body">
-              <ActivityTimeline items={p.activities} options={actOptions} />
-              <ActivityQuickForm projectId={p.id} />
+              <ActivityTimeline items={p.activities} options={can(me, "activity") ? actOptions : undefined} />
+              {can(me, "activity") ? <ActivityQuickForm projectId={p.id} /> : null}
             </div>
           </section>
 
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">社内メモ <span className="ml-1 font-mono text-xs font-normal text-muted">{p.notes.length}</span></h2>
-              <span className="flex gap-1.5">
-                <Link href={`/notes/new?project=${p.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
-                <Link href={`/notes/new?project=${p.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
-              </span>
+              {can(me, "activity") ? (
+                <span className="flex gap-1.5">
+                  <Link href={`/notes/new?project=${p.id}&category=HANDOVER`} className="btn h-7 px-2.5 text-[12.5px]">引き継ぎを書く</Link>
+                  <Link href={`/notes/new?project=${p.id}`} className="btn h-7 px-2.5 text-[12.5px]">＋ メモ</Link>
+                </span>
+              ) : null}
             </div>
             <div className="card-body">
               {p.notes.length === 0 ? (
@@ -155,7 +160,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               ) : (
                 <div className="flex flex-col gap-3">
                   {p.notes.map((n) => (
-                    <NoteCard key={n.id} note={n} showLinks={false} />
+                    <NoteCard key={n.id} note={n} showLinks={false} editable={can(me, "activity")} />
                   ))}
                 </div>
               )}
@@ -168,8 +173,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             <div className="card-head"><h2 className="text-[15px] font-bold">案件情報</h2></div>
             <div className="card-body">
               <dl className="dl">
-                <dt>金額</dt>
-                <dd className="tnum">{yen(p.amount)}</dd>
+                {can(me, "amount") ? (
+                  <>
+                    <dt>金額</dt>
+                    <dd className="tnum">{yen(p.amount)}</dd>
+                  </>
+                ) : null}
                 <dt>開始日</dt>
                 <dd className="tnum">{fmtDate(p.startDate)}</dd>
                 <dt>納期</dt>
@@ -209,15 +218,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <section className="card">
             <div className="card-head">
               <h2 className="text-[15px] font-bold">ファイル <span className="ml-1 font-mono text-xs font-normal text-muted">{p.files.length}</span></h2>
-              <UploadButton options={actOptions} preset={{ projectId: p.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" />
+              {can(me, "file") ? <UploadButton options={actOptions} preset={{ projectId: p.id }} lockTarget label="＋ 追加" className="btn h-7 px-2.5 text-[12.5px]" /> : null}
             </div>
-            <div className="card-body"><FileList items={p.files} editable /></div>
+            <div className="card-body"><FileList items={p.files} editable={can(me, "file")} /></div>
           </section>
 
-          <section className="card">
-            <div className="card-head"><h2 className="text-[15px] font-bold">変更履歴</h2></div>
-            <div className="card-body"><AuditList items={logs} /></div>
-          </section>
+          {can(me, "audit") ? (
+            <section className="card">
+              <div className="card-head"><h2 className="text-[15px] font-bold">変更履歴</h2></div>
+              <div className="card-body"><AuditList items={logs} /></div>
+            </section>
+          ) : null}
         </div>
       </div>
     </div>

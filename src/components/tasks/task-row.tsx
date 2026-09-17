@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
-import { createTask, deleteTask, toggleTask, updateTask } from "@/app/tasks/actions";
+import { createTask, deleteTask, toggleTask, updateTask } from "@/actions/tasks";
 import { Icon } from "@/components/icons";
 import { TaskDialog, type TaskInitial, type TaskOptions } from "@/components/tasks/task-dialog";
 import { Avatar } from "@/components/ui/avatar";
@@ -20,7 +20,7 @@ export type TaskItem = {
   assignee: { id: string; name: string; color: string } | null;
 };
 
-export function TaskRow({ task, options, showProject = true }: { task: TaskItem; options?: TaskOptions; showProject?: boolean }) {
+export function TaskRow({ task, options, showProject = true, readOnly = false }: { task: TaskItem; options?: TaskOptions; showProject?: boolean; readOnly?: boolean }) {
   const router = useRouter();
   const [done, setDone] = useState(task.done);
   const [editing, setEditing] = useState(false);
@@ -63,8 +63,8 @@ export function TaskRow({ task, options, showProject = true }: { task: TaskItem;
         aria-checked={done}
         aria-label={done ? "未完了に戻す" : "完了にする"}
         onClick={toggle}
-        disabled={pending}
-        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border transition-colors ${done ? "border-good bg-good text-white" : "border-line-strong bg-surface hover:border-good"}`}
+        disabled={pending || readOnly}
+        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border transition-colors ${done ? "border-good bg-good text-white" : "border-line-strong bg-surface hover:border-good"} ${readOnly ? "cursor-default opacity-70" : ""}`}
       >
         {done ? <Icon name="check" size={12} strokeWidth={2.4} /> : null}
       </button>

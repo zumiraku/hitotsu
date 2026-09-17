@@ -24,7 +24,7 @@ export function CategoryBadge({ category }: { category: NoteCategory }) {
   return <span className={`badge ${CAT_CLASS[category]}`}>{NOTE_CATEGORY_LABEL[category]}</span>;
 }
 
-export function NoteCard({ note, showLinks = true, compact = false }: { note: NoteCardData; showLinks?: boolean; compact?: boolean }) {
+export function NoteCard({ note, showLinks = true, compact = false, editable = false }: { note: NoteCardData; showLinks?: boolean; compact?: boolean; editable?: boolean }) {
   const edited = note.updatedAt.getTime() - note.createdAt.getTime() > 60_000;
   return (
     <article id={`note-${note.id}`} className={`card scroll-mt-20 p-4 ${note.pinned ? "border-warn shadow-[inset_3px_0_0_var(--color-warn)]" : ""}`}>
@@ -33,7 +33,7 @@ export function NoteCard({ note, showLinks = true, compact = false }: { note: No
           <CategoryBadge category={note.category} />
           <h3 className="mt-1 text-[14.5px] font-bold">{note.title}</h3>
         </div>
-        <NoteCardMenu id={note.id} pinned={note.pinned} />
+        {editable ? <NoteCardMenu id={note.id} pinned={note.pinned} /> : null}
       </div>
       <p className={`whitespace-pre-wrap break-words text-[13.5px] text-ink-2 ${compact ? "line-clamp-4" : ""}`}>{note.body}</p>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">

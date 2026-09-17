@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateNote } from "@/app/notes/actions";
+import { updateNote } from "@/actions/notes";
 import { NoteForm } from "@/components/notes/note-form";
+import { Forbidden } from "@/components/forbidden";
 import { PageHeader } from "@/components/ui/page-header";
 import { activityOptions } from "@/lib/activity-options";
+import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { can } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EditNotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const me = await currentUser();
+  if (!can(me, "activity")) return <Forbidden title="メモを編集" need="一般以上" />;
   const [n, { projects, customers }] = await Promise.all([db.note.findUnique({ where: { id } }), activityOptions()]);
   if (!n) notFound();
   return (

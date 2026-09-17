@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef } from "react";
-import type { ActivityFormState } from "@/app/activities/actions";
+import type { ActivityFormState } from "@/actions/activities";
 import { Field, inputClass, textareaClass } from "@/components/ui/field";
 import { localNow } from "@/lib/format";
 import { ACTIVITY_LABEL } from "@/lib/labels";
