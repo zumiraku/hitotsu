@@ -28,7 +28,7 @@ export const projectSchema = z
     amount: z
       .string()
       .trim()
-      .transform((s) => s.replace(/[,，¥￥\s]/g, "").replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)))
+      .transform(normalizeAmount)
       .pipe(z.union([z.literal(""), z.string().regex(/^\d{1,10}$/, "金額は数字で入力してください（10桁まで）")]))
       .transform((s) => (s ? Number(s) : 0)),
     startDate: dateField,
