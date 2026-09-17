@@ -15,6 +15,7 @@ export default async function UsersPage() {
   const me = await currentUser();
   if (!can(me, "users")) return <Forbidden title="ユーザー・権限" need="管理者" />;
 
+  const sampleAccounts = process.env.NODE_ENV === "production" ? await db.user.count({ where: { email: { endsWith: "@example.com" }, isActive: true } }) : 0;
   const users = await db.user.findMany({
     include: { _count: { select: { ownedProjects: { where: { status: "ACTIVE", deletedAt: null } } } } },
     orderBy: [{ isActive: "desc" }, { role: "asc" }, { name: "asc" }],
@@ -26,6 +27,9 @@ export default async function UsersPage() {
         <InviteButton />
       </PageHeader>
 
+      {sampleAccounts ? (
+        <p className="mb-3 rounded-[7px] bg-warn-soft px-3 py-2 text-[13px] text-warn">サンプルアカウント（@example.com）が {sampleAccounts} 件有効なままです。本番では無効化してください</p>
+      ) : null}
       <div className="card overflow-x-auto">
         <table className="tbl">
           <thead>

@@ -6,6 +6,7 @@ import { createSession, destroyOtherSessions, destroySession, hashPassword, veri
 import { writeAudit } from "@/lib/audit";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
+import { clearLoginFailures, loginBlocked, recordLoginFailure } from "@/lib/rate-limit";
 
 export type AuthState = { message?: string; values?: Record<string, string> } | null;
 
@@ -23,13 +24,18 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   const parsed = loginSchema.safeParse(raw);
   if (!parsed.success) return { message: parsed.error.issues[0].message, values: { email: raw.email } };
 
+  const blockedFor = loginBlocked(parsed.data.email);
+  if (blockedFor) return { message: `失敗が続いたため、あと${blockedFor}分ほどログインできません`, values: { email: raw.email } };
+
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   const ok = user && user.isActive && (await verifyPassword(parsed.data.password, user.passwordHash));
   if (!ok) {
     // 実在しないユーザーでも同じくらいの時間がかかるようにしておく
     if (!user) await verifyPassword(parsed.data.password, "$2a$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345678");
+    recordLoginFailure(parsed.data.email);
     return { message: LOGIN_FAILED, values: { email: raw.email } };
   }
+  clearLoginFailures(parsed.data.email);
 
   await createSession(user.id);
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
