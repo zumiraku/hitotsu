@@ -10,7 +10,7 @@ export default async function PasswordPage({ searchParams }: { searchParams: Pro
   const me = await currentUser();
   return (
     <div className="max-w-xl">
-      <PageHeader title="パスワードの変更" sub={me.email} />
+      <PageHeader title="パスワードの変更" sub={`ログインID：${me.loginId}`} />
       {first === "1" || me.mustChangePassword ? <p className="msg-warn mb-3">仮パスワードでログインしています。先にご自身のパスワードを設定してください。</p> : null}
       <PasswordForm />
     </div>

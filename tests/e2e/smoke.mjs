@@ -21,7 +21,7 @@ try {
   await page.goto(base + "/");
   check("未ログインはログイン画面へ", new URL(page.url()).pathname === "/login");
 
-  await page.fill("#email", "takahashi@example.com");
+  await page.fill("#loginId", "takahashi");
   await page.fill("#password", "password");
   await page.click('button[type="submit"]');
   await page.waitForURL((u) => u.pathname === "/");

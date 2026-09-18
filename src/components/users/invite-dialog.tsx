@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { inviteUser } from "@/actions/users";
-import { Field, inputClass } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { ROLE_LABEL } from "@/lib/labels";
 import { ROLE_DESC, ROLE_ORDER } from "@/lib/permissions";
 
@@ -21,7 +21,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
   }, [state, router]);
 
   const v = (k: string) => state?.values?.[k] ?? "";
-  const err = (k: "name" | "email" | "department" | "role") => state?.errors?.[k];
+  const err = (k: "name" | "loginId" | "department" | "role") => state?.errors?.[k];
 
   return (
     <dialog ref={ref} onClose={onClose} className="dlg w-[min(560px,calc(100%-32px))]">
@@ -31,12 +31,12 @@ function Dialog({ onClose }: { onClose: () => void }) {
             <span>ユーザーを登録しました</span>
           </div>
           <div className="p-3 text-[13px]">
-            <p>{state.created.name} さんに、下記の情報を直接お伝えください。初回ログイン時にパスワードの変更を求められます。</p>
+            <p>{state.created.name} さんに、下記のログインIDと仮パスワードを直接お伝えください。初回ログイン時にパスワードの変更を求められます。</p>
             <table className="kv mt-3 border border-line">
               <tbody>
                 <tr>
-                  <th className="w-[120px]">メールアドレス</th>
-                  <td>{state.created.email}</td>
+                  <th className="w-[120px]">ログインID</th>
+                  <td className="font-mono text-[14px] font-bold">{state.created.loginId}</td>
                 </tr>
                 <tr>
                   <th>仮パスワード</th>
@@ -65,8 +65,8 @@ function Dialog({ onClose }: { onClose: () => void }) {
               <Field label="所属" htmlFor="inv-dept" errors={err("department")}>
                 <input id="inv-dept" name="department" defaultValue={v("department")} className="inp w-[240px]" maxLength={50} />
               </Field>
-              <Field label="メールアドレス" htmlFor="inv-email" required errors={err("email")}>
-                <input id="inv-email" name="email" type="email" defaultValue={v("email")} className={inputClass} maxLength={100} />
+              <Field label="ログインID" htmlFor="inv-login" required errors={err("loginId")} hint="半角の英数字、3〜30文字。（例：yamada、y.tanaka）">
+                <input id="inv-login" name="loginId" defaultValue={v("loginId")} className="inp w-[240px]" maxLength={30} autoComplete="off" />
               </Field>
               <Field label="ロール" htmlFor="inv-role" required errors={err("role")}>
                 <select id="inv-role" name="role" defaultValue={v("role") || "MEMBER"} className="inp max-w-full">

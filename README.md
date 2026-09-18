@@ -36,15 +36,15 @@ http://localhost:3000 で開く。DB 接続の確認は http://localhost:3000/ap
 
 seed 投入後は次のアカウントでログインできます（パスワードはすべて `password`）。
 
-| メール | 名前 | ロール |
+| ログインID | 名前 | ロール |
 | --- | --- | --- |
-| sato@example.com | 佐藤 健太 | 管理者 |
-| takahashi@example.com | 高橋 美咲 | マネージャー |
-| tanaka@example.com | 田中 大輔 | 一般 |
-| suzuki@example.com | 鈴木 あかね | 一般 |
-| yamamoto@example.com | 山本 拓也 | 閲覧のみ |
+| admin | 佐藤 健太 | 管理者 |
+| takahashi | 高橋 美咲 | マネージャー |
+| tanaka | 田中 大輔 | 一般 |
+| suzuki | 鈴木 あかね | 一般 |
+| yamamoto | 山本 拓也 | 閲覧のみ |
 
-本番ではこれらを削除し、「ユーザー・権限」画面から実際のユーザーを登録してください。
+本番ではこれらのパスワードを変えるか無効化し、「ユーザー・権限」画面から実際のユーザーを登録してください。ログインはメールアドレスではなくログインID（半角英数字）で行います。
 
 ## テスト
 
@@ -66,7 +66,7 @@ Docker Compose で DB・アプリ・マイグレーションをまとめて起�
 ```bash
 cp .env.docker.example .env   # DB_PASSWORD を設定
 docker compose up -d --build
-docker compose run --rm migrate npx tsx scripts/create-admin.ts admin@example.co.jp "管理者 太郎" "仮パスワード"
+docker compose run --rm migrate npx tsx scripts/create-admin.ts admin "管理者 太郎" "仮パスワード"
 ```
 
 ## よく使うコマンド

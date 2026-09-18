@@ -14,30 +14,36 @@ const COLORS = ["#1F5F8B", "#7A3E9D", "#1F8A4C", "#B7791F", "#C2413B", "#2C7A7B"
 
 const inviteSchema = z.object({
   name: z.string().trim().min(1, "名前を入力してください").max(50, "50文字以内で入力してください"),
-  email: z.string().trim().toLowerCase().pipe(z.email("メールアドレスの形式が正しくありません")),
+  loginId: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3, "ログインIDは3文字以上にしてください")
+    .max(30, "ログインIDは30文字以内にしてください")
+    .regex(/^[a-z0-9][a-z0-9._-]*$/, "ログインIDは半角の英数字と . _ - で入力してください"),
   department: z.string().trim().max(50, "50文字以内で入力してください"),
   role: z.enum(["ADMIN", "MANAGER", "MEMBER", "VIEWER"], { error: "ロールを選んでください" }),
 });
 
 export type InviteState = {
-  errors?: Partial<Record<"name" | "email" | "department" | "role", string[]>>;
+  errors?: Partial<Record<"name" | "loginId" | "department" | "role", string[]>>;
   message?: string;
   values?: Record<string, string>;
-  created?: { name: string; email: string; password: string };
+  created?: { name: string; loginId: string; password: string };
 } | null;
 
 export async function inviteUser(_prev: InviteState, formData: FormData): Promise<InviteState> {
   const { user: me, denied } = await requirePerm("users");
   if (denied) return { message: denied };
-  const raw = Object.fromEntries(["name", "email", "department", "role"].map((k) => [k, String(formData.get(k) ?? "")]));
+  const raw = Object.fromEntries(["name", "loginId", "department", "role"].map((k) => [k, String(formData.get(k) ?? "")]));
   const parsed = inviteSchema.safeParse(raw);
   if (!parsed.success) {
     const errors: NonNullable<InviteState>["errors"] = {};
     for (const i of parsed.error.issues) (errors[i.path[0] as keyof typeof errors] ??= []).push(i.message);
     return { errors, values: raw };
   }
-  if (await db.user.findUnique({ where: { email: parsed.data.email }, select: { id: true } })) {
-    return { errors: { email: ["このメールアドレスはすでに登録されています"] }, values: raw };
+  if (await db.user.findUnique({ where: { loginId: parsed.data.loginId }, select: { id: true } })) {
+    return { errors: { loginId: ["このログインIDはすでに使われています"] }, values: raw };
   }
 
   const password = temporaryPassword();
@@ -46,7 +52,7 @@ export async function inviteUser(_prev: InviteState, formData: FormData): Promis
     const u = await tx.user.create({
       data: {
         name: parsed.data.name,
-        email: parsed.data.email,
+        loginId: parsed.data.loginId,
         department: parsed.data.department || null,
         role: parsed.data.role,
         color: COLORS[count % COLORS.length],
@@ -59,7 +65,7 @@ export async function inviteUser(_prev: InviteState, formData: FormData): Promis
   });
 
   revalidatePath("/users");
-  return { created: { name: created.name, email: created.email, password } };
+  return { created: { name: created.name, loginId: created.loginId, password } };
 }
 
 export async function changeRole(userId: string, role: Role): Promise<{ message?: string }> {
