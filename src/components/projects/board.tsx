@@ -5,21 +5,19 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { ProjectStatus } from "@/generated/prisma/enums";
 import { changeProjectStatus } from "@/actions/projects";
-import { Icon } from "@/components/icons";
-import { Avatar } from "@/components/ui/avatar";
-import { STATUS_CLASS, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
+import { STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 
 export type BoardCard = {
   id: string;
+  code: string;
   name: string;
   status: ProjectStatus;
   customerName: string;
-  owner: { name: string; color: string } | null;
-  dueLabel: string | null;
+  ownerName: string | null;
+  dueText: string | null;
   overdue: boolean;
   openTasks: number;
-  alertCount: number;
-  alertLevel: "bad" | "warn" | null;
+  alerts: string[];
 };
 
 export function Board({ cards: initial, canDrag = true }: { cards: BoardCard[]; canDrag?: boolean }) {
@@ -53,8 +51,9 @@ export function Board({ cards: initial, canDrag = true }: { cards: BoardCard[]; 
 
   return (
     <div>
-      {error ? <p className="mb-2 rounded-[7px] bg-bad-soft px-3 py-2 text-[13px] text-bad">{error}</p> : null}
-      <div className="grid auto-cols-[minmax(230px,1fr)] grid-flow-col items-start gap-3 overflow-x-auto pb-2">
+      {error ? <p className="msg-bad mb-2">{error}</p> : null}
+      {canDrag ? <p className="mb-2 text-[12px] text-muted">案件をドラッグして別の列に移すと、ステータスが変更されます。</p> : null}
+      <div className="board grid auto-cols-[minmax(220px,1fr)] grid-flow-col items-start gap-2 overflow-x-auto pb-2">
         {STATUS_ORDER.map((status) => {
           const items = cards.filter((c) => c.status === status);
           return (
@@ -71,52 +70,45 @@ export function Board({ cards: initial, canDrag = true }: { cards: BoardCard[]; 
                 e.preventDefault();
                 drop(status);
               }}
-              className={`min-h-[220px] rounded-card border p-2.5 transition-colors ${over === status ? "border-primary bg-primary-soft" : "border-line bg-surface-2"}`}
+              className={`min-h-[220px] border ${over === status ? "border-primary bg-[#f3f7fc]" : "border-line bg-surface-2"}`}
             >
-              <div className="mb-2 flex items-center justify-between px-0.5">
-                <span className={`badge ${STATUS_CLASS[status]}`}>{STATUS_LABEL[status]}</span>
-                <span className="font-mono text-xs text-muted">{items.length}</span>
+              <div className="border-b border-line bg-surface-3 px-2 py-1 text-[12.5px] font-bold">
+                {STATUS_LABEL[status]}（{items.length}）
               </div>
-              {items.length === 0 ? <p className="py-6 text-center text-xs text-muted">なし</p> : null}
-              {items.map((c) => (
-                <div
-                  key={c.id}
-                  draggable={canDrag}
-                  onDragStart={(e) => {
-                    setDragId(c.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragEnd={() => {
-                    setDragId(null);
-                    setOver(null);
-                  }}
-                  className={`mb-2 rounded-[7px] border border-line bg-surface p-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.03)] hover:border-line-strong ${canDrag ? "cursor-grab active:cursor-grabbing" : ""} ${dragId === c.id ? "opacity-40" : ""}`}
-                >
-                  <Link href={`/projects/${c.id}`} className="block text-[13.5px] font-bold leading-snug hover:underline" draggable={false}>
-                    {c.name}
-                  </Link>
-                  <div className="mb-2 text-xs text-muted">{c.customerName}</div>
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="inline-flex items-center gap-1.5">
-                      {c.owner ? <Avatar name={c.owner.name} color={c.owner.color} size={22} /> : null}
-                      {c.dueLabel ? <span className={`tnum ${c.overdue ? "font-bold text-bad" : "text-ink-2"}`}>{c.dueLabel}</span> : null}
-                    </span>
-                    <span className="inline-flex items-center gap-1 font-mono text-[11.5px] text-muted">
-                      {c.alertCount ? (
-                        <span className={c.alertLevel === "bad" ? "text-bad" : "text-warn"} title="要確認">
-                          <Icon name="alert" size={12} />
-                        </span>
-                      ) : null}
-                      {c.openTasks}件
-                    </span>
+              <div className="p-2">
+                {items.length === 0 ? <p className="py-4 text-center text-[12px] text-muted">なし</p> : null}
+                {items.map((c) => (
+                  <div
+                    key={c.id}
+                    draggable={canDrag}
+                    onDragStart={(e) => {
+                      setDragId(c.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => {
+                      setDragId(null);
+                      setOver(null);
+                    }}
+                    className={`mb-2 border border-line bg-surface p-2 text-[12.5px] ${canDrag ? "cursor-move" : ""} ${dragId === c.id ? "opacity-40" : ""}`}
+                  >
+                    <div className="text-[11px] text-muted">{c.code}</div>
+                    <Link href={`/projects/${c.id}`} draggable={false}>
+                      {c.name}
+                    </Link>
+                    <div className="mt-0.5 text-[12px]">{c.customerName}</div>
+                    <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-[11.5px] text-ink-2">
+                      <span>担当：{c.ownerName ?? "未割当"}</span>
+                      <span>未完了 {c.openTasks}件</span>
+                    </div>
+                    {c.dueText ? <div className={`text-[11.5px] ${c.overdue ? "text-bad" : "text-ink-2"}`}>納期：{c.dueText}</div> : null}
+                    {c.alerts.length ? <div className="mt-0.5 text-[11.5px] text-warn">{c.alerts.join("、")}</div> : null}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           );
         })}
       </div>
-      {canDrag ? <p className="mt-1.5 text-xs text-muted">カードをドラッグしてステータスを変更できます。変更はすぐ保存され、変更履歴に残ります</p> : null}
     </div>
   );
 }

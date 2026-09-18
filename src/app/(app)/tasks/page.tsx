@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import { TaskFilters } from "@/components/tasks/task-filters";
-import { AddTaskButton, TaskRow } from "@/components/tasks/task-row";
-import { Empty } from "@/components/ui/empty";
+import { AddTaskButton, TaskRow, TaskTableHead } from "@/components/tasks/task-row";
 import { PageHeader } from "@/components/ui/page-header";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
@@ -58,7 +57,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const weekLeft = Math.round((weekEnd.getTime() - today.getTime()) / 86_400_000);
   const groups: { label: string; tone?: string; items: typeof items }[] = [
     { label: "期限超過", tone: "text-bad", items: items.filter((t) => !t.done && t.daysLeft !== null && t.daysLeft < 0) },
-    { label: "今日", tone: "text-warn", items: items.filter((t) => !t.done && t.daysLeft === 0) },
+    { label: "本日", tone: "text-warn", items: items.filter((t) => !t.done && t.daysLeft === 0) },
     { label: "今週", items: items.filter((t) => !t.done && t.daysLeft !== null && t.daysLeft > 0 && t.daysLeft <= weekLeft) },
     { label: "来週以降", items: items.filter((t) => !t.done && t.daysLeft !== null && t.daysLeft > weekLeft) },
     { label: "期限なし", items: items.filter((t) => !t.done && t.daysLeft === null) },
@@ -66,31 +65,38 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   ].filter((g) => g.items.length);
 
   const options = { projects, users };
+  const editable = can(me, "activity");
 
   return (
     <div>
-      <PageHeader title="タスク" sub={`未完了 ${openCount}件 · 期限超過 ${overdueCount}件`}>
-        {can(me, "activity") ? <AddTaskButton options={options} preset={{ assigneeId: me.id }} /> : null}
+      <PageHeader title="タスク" sub={`未完了 ${openCount}件（うち期限超過 ${overdueCount}件）`}>
+        {editable ? <AddTaskButton options={options} preset={{ assigneeId: me.id }} /> : null}
       </PageHeader>
       <Suspense>
         <TaskFilters users={users} projects={projects} />
       </Suspense>
 
       {groups.length === 0 ? (
-        <div className="card"><Empty>該当するタスクはありません</Empty></div>
+        <div className="box">
+          <div className="box-body text-muted">該当するタスクはありません。</div>
+        </div>
       ) : (
         groups.map((g) => (
-          <section key={g.label} className="mb-4">
-            <h2 className={`mb-1.5 flex items-center gap-1.5 text-xs font-bold tracking-wider ${g.tone ?? "text-muted"}`}>
-              {g.label}
-              <span className="font-mono font-normal">{g.items.length}</span>
+          <div key={g.label} className="mb-4">
+            <h2 className={`mb-1 text-[13px] font-bold ${g.tone ?? ""}`}>
+              {g.label}（{g.items.length}件）
             </h2>
-            <div className="flex flex-col gap-1.5">
-              {g.items.map((t) => (
-                <TaskRow key={t.id} task={t} options={can(me, "activity") ? options : undefined} readOnly={!can(me, "activity")} />
-              ))}
+            <div className="overflow-x-auto">
+              <table className="tbl">
+                <TaskTableHead actions={editable} />
+                <tbody>
+                  {g.items.map((t) => (
+                    <TaskRow key={t.id} task={t} options={editable ? options : undefined} readOnly={!editable} />
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </section>
+          </div>
         ))
       )}
     </div>

@@ -14,26 +14,27 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const n = await db.note.findUnique({ where: { id }, select: { title: true } });
-  return { title: n ? `${n.title} を編集` : "編集" };
+  return { title: n ? `${n.title} の編集` : "編集" };
 }
 
 export default async function EditNotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await currentUser();
-  if (!can(me, "activity")) return <Forbidden title="メモを編集" need="一般以上" />;
+  if (!can(me, "activity")) return <Forbidden title="社内メモの編集" need="一般以上" />;
   const [n, { projects, customers }] = await Promise.all([db.note.findUnique({ where: { id } }), activityOptions()]);
   if (!n) notFound();
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link href={`/notes#note-${n.id}`} className="mb-2 inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink">
-        <span aria-hidden>←</span> 社内メモ・引き継ぎ
-      </Link>
-      <PageHeader title="メモを編集" />
+    <div className="max-w-4xl">
+      <p className="mb-1 text-[12px]">
+        <Link href={`/notes#note-${n.id}`}>« 社内メモ・引き継ぎ一覧へ戻る</Link>
+      </p>
+      <PageHeader title="社内メモの編集" />
+      <p className="mb-2 text-[12px] text-muted">※ 「必須」の項目は必ず入力してください。</p>
       <NoteForm
         action={updateNote.bind(null, n.id)}
         projects={projects}
         customers={customers}
-        submitLabel="保存する"
+        submitLabel="更新"
         cancelHref={`/notes#note-${n.id}`}
         initial={{ title: n.title, category: n.category, body: n.body, projectId: n.projectId ?? "", customerId: n.customerId ?? "", pinned: n.pinned }}
       />

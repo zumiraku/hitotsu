@@ -23,24 +23,24 @@ export default async function UsersPage() {
 
   return (
     <div>
-      <PageHeader title="ユーザー・権限" sub={`${users.filter((u) => u.isActive).length}人が有効。ロールを変えると次の画面表示から反映されます`}>
+      <PageHeader title="ユーザー・権限" sub={`有効 ${users.filter((u) => u.isActive).length}名`}>
         <InviteButton />
       </PageHeader>
 
-      {sampleAccounts ? (
-        <p className="mb-3 rounded-[7px] bg-warn-soft px-3 py-2 text-[13px] text-warn">サンプルアカウント（@example.com）が {sampleAccounts} 件有効なままです。本番では無効化してください</p>
-      ) : null}
-      <div className="card overflow-x-auto">
+      {sampleAccounts ? <p className="msg-warn mb-3">サンプルアカウント（@example.com）が {sampleAccounts} 件有効なままです。本番運用では無効化してください。</p> : null}
+      <p className="mb-2 text-[12px] text-muted">※ ロールを変更すると、対象ユーザーの次回画面表示から反映されます。</p>
+      <div className="overflow-x-auto">
         <table className="tbl">
           <thead>
             <tr>
-              <th className="th">名前</th>
+              <th className="th">氏名</th>
+              <th className="th">メールアドレス</th>
               <th className="th">所属</th>
               <th className="th">ロール</th>
               <th className="th">状態</th>
               <th className="th text-right">担当案件</th>
               <th className="th">最終ログイン</th>
-              <th className="th"></th>
+              <th className="th">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +54,6 @@ export default async function UsersPage() {
                   email: u.email,
                   department: u.department,
                   role: u.role,
-                  color: u.color,
                   isActive: u.isActive,
                   mustChangePassword: u.mustChangePassword,
                   lastLoginText: u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : "未ログイン",
@@ -66,12 +65,10 @@ export default async function UsersPage() {
         </table>
       </div>
 
-      <section className="card mt-4">
-        <div className="card-head">
-          <h2 className="text-[15px] font-bold">ロールごとにできること</h2>
-          <span className="text-xs text-muted">画面の表示だけでなく、保存処理の側でも同じ権限を確認しています</span>
-        </div>
-        <div className="overflow-x-auto">
+      <div className="box mt-4">
+        <div className="box-head">ロール別の権限一覧</div>
+        <div className="box-body overflow-x-auto">
+          <p className="mb-2 text-[12px] text-muted">※ 画面の表示だけでなく、保存処理の側でも同じ権限を確認しています。</p>
           <table className="tbl">
             <thead>
               <tr>
@@ -79,7 +76,7 @@ export default async function UsersPage() {
                 {ROLE_ORDER.map((r) => (
                   <th key={r} className="th text-center">
                     {ROLE_LABEL[r]}
-                    <div className="text-[10.5px] font-normal tracking-normal">{ROLE_DESC[r]}</div>
+                    <div className="text-[10.5px] font-normal">{ROLE_DESC[r]}</div>
                   </th>
                 ))}
               </tr>
@@ -90,7 +87,7 @@ export default async function UsersPage() {
                   <td className="td">{PERM_LABEL[p]}</td>
                   {ROLE_ORDER.map((r) => (
                     <td key={r} className="td text-center">
-                      {ROLE_PERMS[r].includes(p) ? <span className="font-bold text-good">●</span> : <span className="text-line-strong">—</span>}
+                      {ROLE_PERMS[r].includes(p) ? "○" : <span className="text-muted">－</span>}
                     </td>
                   ))}
                 </tr>
@@ -98,7 +95,7 @@ export default async function UsersPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

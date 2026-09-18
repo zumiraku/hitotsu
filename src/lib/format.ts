@@ -13,13 +13,13 @@ export function dateOnly(d: Date) {
 }
 
 export function fmtDate(d: Date | null | undefined) {
-  if (!d) return "—";
+  if (!d) return "－";
   const x = dateOnly(d);
   return `${x.getFullYear()}/${pad(x.getMonth() + 1)}/${pad(x.getDate())}`;
 }
 
 export function fmtDateTime(d: Date | null | undefined) {
-  if (!d) return "—";
+  if (!d) return "－";
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
@@ -43,7 +43,7 @@ export function ago(d: Date) {
 }
 
 export function yen(n: number) {
-  return "¥" + n.toLocaleString("ja-JP");
+  return n.toLocaleString("ja-JP") + "円";
 }
 
 export function fileSize(b: number) {

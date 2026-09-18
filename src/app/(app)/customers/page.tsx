@@ -3,8 +3,7 @@ import { Suspense } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CustomerType } from "@/generated/prisma/enums";
 import { CustomerFilters } from "@/components/customers/customer-filters";
-import { UserChip } from "@/components/ui/avatar";
-import { CustomerTypeBadge, Tag } from "@/components/ui/badge";
+import { Tag, TypeLabel } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
 import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
@@ -13,7 +12,7 @@ import { SortHeader } from "@/components/ui/sort-header";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
 import { can } from "@/lib/permissions";
-import { ago } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
 import { ACTIVITY_LABEL } from "@/lib/labels";
 
 export const metadata = { title: "顧客・取引先" };
@@ -70,7 +69,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
       include: {
-        owner: { select: { name: true, color: true } },
+        owner: { select: { name: true } },
         _count: { select: { projects: { where: { status: "ACTIVE", deletedAt: null } } } },
       },
     }),
@@ -109,22 +108,24 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <PageHeader title="顧客・取引先" sub={`${total}件${q || type || owner ? "（絞り込み中）" : ""}`}>
-        {can(me, "edit") ? <Link href="/customers/new" className="btn btn-primary">＋ 新規追加</Link> : null}
+      <PageHeader title="顧客・取引先一覧" sub={`${total}件`}>
+        {can(me, "edit") ? <Link href="/customers/new" className="btn">新規登録</Link> : null}
       </PageHeader>
       <Suspense>
-        <Flash messages={{ deleted: "削除しました" }} />
+        <Flash messages={{ deleted: "削除しました。" }} />
         <CustomerFilters users={users} />
       </Suspense>
 
-      <div className="card overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="tbl">
           <thead>
             <tr>
+              <SortHeader label="コード" field="code" {...sortProps} />
               <SortHeader label="会社名" field="name" {...sortProps} />
               <SortHeader label="種別" field="type" {...sortProps} />
               <SortHeader label="業種" field="industry" {...sortProps} />
-              <th className="th">先方担当</th>
+              <th className="th">先方担当者</th>
+              <th className="th">電話</th>
               <SortHeader label="社内担当" field="owner" {...sortProps} />
               <SortHeader label="進行中案件" field="projects" {...sortProps} className="text-right" />
               <th className="th">最終対応</th>
@@ -134,8 +135,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <tbody>
             {customers.length === 0 ? (
               <tr>
-                <td colSpan={8}>
-                  <Empty>該当する顧客・取引先がありません</Empty>
+                <td colSpan={10} className="td">
+                  <Empty>該当する顧客・取引先はありません。</Empty>
                 </td>
               </tr>
             ) : (
@@ -143,26 +144,27 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 const last = lastActivity.get(c.id);
                 return (
                   <tr key={c.id} className="tr-link">
+                    <td className="td tnum whitespace-nowrap">{c.code}</td>
                     <td className="td">
-                      <Link href={`/customers/${c.id}`} className="font-bold hover:underline">{c.name}</Link>
-                      <div className="font-mono text-xs text-muted">{c.code}</div>
+                      <Link href={`/customers/${c.id}`}>{c.name}</Link>
                     </td>
-                    <td className="td"><CustomerTypeBadge type={c.type} /></td>
-                    <td className="td">{c.industry || <span className="text-muted">—</span>}</td>
-                    <td className="td">
-                      {c.contactName || <span className="text-muted">—</span>}
-                      {c.contactTitle ? <div className="text-xs text-muted">{c.contactTitle}</div> : null}
-                    </td>
-                    <td className="td"><UserChip user={c.owner} /></td>
-                    <td className="td tnum text-right">{c._count.projects}</td>
+                    <td className="td whitespace-nowrap"><TypeLabel type={c.type} /></td>
+                    <td className="td">{c.industry || <span className="text-muted">－</span>}</td>
                     <td className="td whitespace-nowrap">
+                      {c.contactName || <span className="text-muted">－</span>}
+                      {c.contactTitle ? <span className="ml-1 text-[11px] text-muted">{c.contactTitle}</span> : null}
+                    </td>
+                    <td className="td tnum whitespace-nowrap">{c.tel || <span className="text-muted">－</span>}</td>
+                    <td className="td whitespace-nowrap">{c.owner?.name ?? <span className="text-muted">未割当</span>}</td>
+                    <td className="td tnum text-right">{c._count.projects}</td>
+                    <td className="td tnum whitespace-nowrap">
                       {last ? (
                         <>
-                          {ago(last.occurredAt)}
-                          <div className="text-xs text-muted">{ACTIVITY_LABEL[last.type]}</div>
+                          {fmtDate(last.occurredAt)}
+                          <span className="ml-1 text-[11px] text-muted">{ACTIVITY_LABEL[last.type]}</span>
                         </>
                       ) : (
-                        <span className="text-muted">—</span>
+                        <span className="text-muted">－</span>
                       )}
                     </td>
                     <td className="td">{c.tags.map((t) => <Tag key={t}>{t}</Tag>)}</td>
@@ -173,13 +175,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
       </div>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-muted">
-        <span>
-          {total ? `${(page - 1) * PER_PAGE + 1}〜${Math.min(page * PER_PAGE, total)}件 / ${total}件` : ""}
-        </span>
-        <Pagination page={page} pageCount={pageCount} makeHref={(p) => makeHref({ page: String(p) })} />
-      </div>
+      <Pagination page={page} pageCount={pageCount} total={total} perPage={PER_PAGE} makeHref={(p) => makeHref({ page: String(p) })} />
     </div>
   );
 }

@@ -2,10 +2,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import type { AuditAction } from "@/generated/prisma/enums";
-import { ACTION_CLASS, ACTION_LABEL, TARGET_LABEL, asChanges, ChangeList } from "@/components/audit-list";
+import { ACTION_LABEL, TARGET_LABEL, asChanges, ChangeList } from "@/components/audit-list";
 import { AuditFilters } from "@/components/audit-filters";
 import { Forbidden } from "@/components/forbidden";
-import { UserChip } from "@/components/ui/avatar";
 import { Empty } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
@@ -54,7 +53,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   const [total, logs, users] = await Promise.all([
     db.auditLog.count({ where }),
-    db.auditLog.findMany({ where, include: { user: { select: { name: true, color: true } } }, orderBy: { createdAt: "desc" }, skip: (page - 1) * PER_PAGE, take: PER_PAGE }),
+    db.auditLog.findMany({ where, include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" }, skip: (page - 1) * PER_PAGE, take: PER_PAGE }),
     db.user.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / PER_PAGE));
@@ -67,11 +66,12 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <div>
-      <PageHeader title="変更履歴" sub={`${total}件。誰が・いつ・何を変えたかを自動で記録しています。手で書く必要はありません`} />
+      <PageHeader title="変更履歴" sub={`${total}件`} />
+      <p className="mb-2 text-[12px] text-muted">※ 誰が・いつ・何を変更したかを自動で記録しています。</p>
       <Suspense>
         <AuditFilters users={users} />
       </Suspense>
-      <div className="card overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="tbl">
           <thead>
             <tr>
@@ -85,7 +85,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <tbody>
             {logs.length === 0 ? (
               <tr>
-                <td colSpan={5}><Empty>該当する履歴がありません</Empty></td>
+                <td colSpan={5} className="td"><Empty>該当する履歴はありません。</Empty></td>
               </tr>
             ) : (
               logs.map((l) => {
@@ -93,13 +93,13 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
                 return (
                   <tr key={l.id} className="tr-link align-top">
                     <td className="td tnum whitespace-nowrap">{fmtDateTime(l.createdAt)}</td>
-                    <td className="td whitespace-nowrap"><UserChip user={l.user} /></td>
-                    <td className="td"><span className={`badge ${ACTION_CLASS[l.action]}`}>{ACTION_LABEL[l.action]}</span></td>
+                    <td className="td whitespace-nowrap">{l.user?.name}</td>
+                    <td className="td whitespace-nowrap">{ACTION_LABEL[l.action]}</td>
                     <td className="td">
-                      <span className="mr-1.5 text-xs text-muted">{TARGET_LABEL[l.targetType] ?? l.targetType}</span>
-                      {href ? <Link href={href} className="text-primary hover:underline">{l.targetLabel}</Link> : l.targetLabel}
+                      <span className="mr-1 text-[11px] text-muted">［{TARGET_LABEL[l.targetType] ?? l.targetType}］</span>
+                      {href ? <Link href={href}>{l.targetLabel}</Link> : l.targetLabel}
                     </td>
-                    <td className="td min-w-[260px]">{asChanges(l.changes).length ? <ChangeList changes={asChanges(l.changes)} /> : <span className="text-muted">—</span>}</td>
+                    <td className="td min-w-[260px]">{asChanges(l.changes).length ? <ChangeList changes={asChanges(l.changes)} /> : <span className="text-muted">－</span>}</td>
                   </tr>
                 );
               })
@@ -107,10 +107,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-muted">
-        <span>{total ? `${(page - 1) * PER_PAGE + 1}〜${Math.min(page * PER_PAGE, total)}件 / ${total}件` : ""}</span>
-        <Pagination page={page} pageCount={pageCount} makeHref={makeHref} />
-      </div>
+      <Pagination page={page} pageCount={pageCount} total={total} perPage={PER_PAGE} makeHref={makeHref} />
     </div>
   );
 }

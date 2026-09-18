@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { MAX_UPLOAD_BYTES, isBlockedExt, storage, storageKey } from "@/lib/storage";
 
 export const fileInclude = {
-  uploader: { select: { name: true, color: true } },
+  uploader: { select: { name: true } },
   project: { select: { id: true, name: true } },
   customer: { select: { id: true, name: true } },
 } as const;

@@ -13,13 +13,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const c = await db.customer.findUnique({ where: { id }, select: { name: true } });
-  return { title: c ? `${c.name} を編集` : "編集" };
+  return { title: c ? `${c.name} の編集` : "編集" };
 }
 
 export default async function EditCustomerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await currentUser();
-  if (!can(me, "edit")) return <Forbidden title="顧客・取引先を編集" need="一般以上" />;
+  if (!can(me, "edit")) return <Forbidden title="顧客・取引先の編集" need="一般以上" />;
   const [c, users] = await Promise.all([
     db.customer.findFirst({ where: { id, deletedAt: null } }),
     db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -28,15 +28,16 @@ export default async function EditCustomerPage({ params }: { params: Promise<{ i
 
   const action = updateCustomer.bind(null, c.id);
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link href={`/customers/${c.id}`} className="mb-2 inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink">
-        <span aria-hidden>←</span> {c.name}
-      </Link>
-      <PageHeader title="顧客・取引先を編集" sub={c.code} />
+    <div className="max-w-4xl">
+      <p className="mb-1 text-[12px]">
+        <Link href={`/customers/${c.id}`}>« {c.name}</Link>
+      </p>
+      <PageHeader title="顧客・取引先の編集" sub={c.code} />
+      <p className="mb-2 text-[12px] text-muted">※ 「必須」の項目は必ず入力してください。</p>
       <CustomerForm
         action={action}
         users={users}
-        submitLabel="保存する"
+        submitLabel="更新"
         cancelHref={`/customers/${c.id}`}
         initial={{
           name: c.name,

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Field, inputClass } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 
 type Opt = { id: string; name: string };
 export type UploadOptions = { projects: Opt[]; customers: Opt[] };
@@ -27,17 +27,17 @@ function Dialog({ options, preset, lockTarget, onClose }: { options: UploadOptio
     e.preventDefault();
     const files = Array.from(fileRef.current?.files ?? []);
     if (!files.length) {
-      setErrors(["ファイルを選んでください"]);
+      setErrors(["ファイルを選択してください。"]);
       return;
     }
     if (!projectId && !customerId) {
-      setErrors(["案件か顧客のどちらかを選んでください"]);
+      setErrors(["案件または顧客を選択してください。"]);
       return;
     }
     setErrors([]);
     const failed: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      setProgress(`アップロード中 ${i + 1}/${files.length}：${files[i].name}`);
+      setProgress(`アップロード中（${i + 1}/${files.length}）：${files[i].name}`);
       const fd = new FormData();
       fd.set("file", files[i]);
       fd.set("projectId", projectId);
@@ -45,9 +45,9 @@ function Dialog({ options, preset, lockTarget, onClose }: { options: UploadOptio
       try {
         const res = await fetch("/api/files", { method: "POST", body: fd });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) failed.push(json.message ?? `「${files[i].name}」の保存に失敗しました`);
+        if (!res.ok) failed.push(json.message ?? `「${files[i].name}」の保存に失敗しました。`);
       } catch {
-        failed.push(`「${files[i].name}」の送信に失敗しました`);
+        failed.push(`「${files[i].name}」の送信に失敗しました。`);
       }
     }
     setProgress(null);
@@ -57,74 +57,60 @@ function Dialog({ options, preset, lockTarget, onClose }: { options: UploadOptio
   };
 
   return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
-      onClick={(e) => {
-        if (e.target === ref.current && !progress) onClose();
-      }}
-      className="m-auto w-[min(560px,calc(100%-32px))] rounded-xl border border-line bg-surface p-0 text-ink shadow-[0_12px_40px_rgba(18,28,40,0.22)] backdrop:bg-[rgba(10,18,28,0.5)]"
-    >
+    <dialog ref={ref} onClose={onClose} className="dlg w-[min(560px,calc(100%-32px))]">
       <form onSubmit={submit}>
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="text-[15px] font-bold">ファイルを追加</h2>
-          <button type="button" onClick={onClose} disabled={!!progress} aria-label="閉じる" className="flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2">✕</button>
+        <div className="dlg-head">
+          <span>ファイルの追加</span>
+          <button type="button" onClick={onClose} disabled={!!progress} className="text-[12px] font-normal text-link hover:underline">閉じる</button>
         </div>
-        <div className="grid gap-4 px-4 py-4">
+        <div className="p-3">
           {errors.length ? (
-            <ul className="rounded-[7px] bg-bad-soft px-3 py-2 text-[13px] text-bad">
+            <ul className="msg-bad mb-3">
               {errors.map((m) => (
                 <li key={m}>{m}</li>
               ))}
             </ul>
           ) : null}
-          <Field label="ファイル（複数可）" htmlFor="upload-file" required>
-            <input
-              ref={fileRef}
-              id="upload-file"
-              type="file"
-              multiple
-              className="block w-full text-[13px] file:mr-3 file:rounded-md file:border file:border-line file:bg-surface-2 file:px-3 file:py-1.5 file:text-[13px] file:font-bold"
-            />
-          </Field>
-          {lockedName ? (
-            <div>
-              <div className="text-[12.5px] text-muted">{preset.projectId ? "案件" : "顧客"}</div>
-              <div className="mt-1 text-[13.5px] font-bold">{lockedName}</div>
-            </div>
-          ) : (
-            <>
-              <Field label="案件" htmlFor="upload-project">
-                <select id="upload-project" value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputClass}>
-                  <option value="">（案件に紐づけない）</option>
-                  {options.projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="顧客・取引先（案件を選ばない場合）" htmlFor="upload-customer">
-                <select id="upload-customer" value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={!!projectId} className={`${inputClass} disabled:opacity-60`}>
-                  <option value="">（選択）</option>
-                  {options.customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </Field>
-            </>
-          )}
-          <p className="text-[12px] text-muted">同じ場所に同じ名前のファイルを追加すると、上書きせず新しい版（v2, v3…）として保存され、前の版もあとから取り出せます。</p>
+          <div className="form">
+            <Field label="ファイル" htmlFor="upload-file" required hint="複数選択できます。">
+              <input ref={fileRef} id="upload-file" type="file" multiple className="block w-full text-[13px]" />
+            </Field>
+            {lockedName ? (
+              <Field label={preset.projectId ? "案件" : "顧客"}>{lockedName}</Field>
+            ) : (
+              <>
+                <Field label="案件" htmlFor="upload-project">
+                  <select id="upload-project" value={projectId} onChange={(e) => setProjectId(e.target.value)} className="inp max-w-full">
+                    <option value="">（案件に紐づけない）</option>
+                    {options.projects.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="顧客・取引先" htmlFor="upload-customer" hint="案件を選ばない場合に指定してください。">
+                  <select id="upload-customer" value={customerId} onChange={(e) => setCustomerId(e.target.value)} disabled={!!projectId} className="inp max-w-full">
+                    <option value="">（選択）</option>
+                    {options.customers.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </Field>
+              </>
+            )}
+          </div>
+          <p className="mt-2 text-[12px] text-muted">※ 同じ場所に同じ名前のファイルを追加した場合は上書きせず、新しい版（第2版、第3版…）として保存されます。前の版もあとから取り出せます。</p>
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
-          {progress ? <span className="mr-auto truncate text-[12.5px] text-muted">{progress}</span> : null}
+        <div className="dlg-foot">
+          {progress ? <span className="mr-auto truncate text-[12px] text-muted">{progress}</span> : null}
           <button type="button" onClick={onClose} disabled={!!progress} className="btn">キャンセル</button>
-          <button type="submit" disabled={!!progress} className="btn btn-primary disabled:opacity-60">{progress ? "送信中…" : "アップロード"}</button>
+          <button type="submit" disabled={!!progress} className="btn btn-primary">{progress ? "送信中..." : "アップロード"}</button>
         </div>
       </form>
     </dialog>
   );
 }
 
-export function UploadButton({ options, preset = {}, lockTarget = false, label = "＋ ファイルを追加", className = "btn btn-primary" }: { options: UploadOptions; preset?: Preset; lockTarget?: boolean; label?: string; className?: string }) {
+export function UploadButton({ options, preset = {}, lockTarget = false, label = "ファイル追加", className = "btn" }: { options: UploadOptions; preset?: Preset; lockTarget?: boolean; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>

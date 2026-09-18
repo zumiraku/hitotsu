@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { inputBase } from "@/components/ui/field";
 
 type Opt = { id: string; name: string };
 const SHOWS: [string, string][] = [
@@ -32,28 +31,36 @@ export function TaskFilters({ users, projects }: { users: Opt[]; projects: Opt[]
   const hasFilter = !!(params.get("assignee") || params.get("project") || due);
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="inline-flex overflow-hidden rounded-[7px] border border-line">
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-surface-2 px-3 py-2 text-[12.5px]">
+      <span className="flex flex-wrap items-center gap-x-3">
+        表示：
         {SHOWS.map(([k, l]) => (
-          <button key={k} type="button" onClick={() => push({ show: k === "open" ? "" : k, due: "" })} className={`h-8 px-3 text-[13px] ${show === k && !due ? "bg-primary-soft font-bold text-primary" : "bg-surface text-ink-2 hover:bg-surface-2"}`}>
+          <label key={k} className="inline-flex cursor-pointer items-center gap-1">
+            <input type="radio" name="show" checked={show === k && !due} onChange={() => push({ show: k === "open" ? "" : k, due: "" })} />
             {l}
-          </button>
+          </label>
         ))}
       </span>
-      {due ? <span className="badge bg-info-soft text-info">期限：{due.replace(/-/g, "/")}</span> : null}
-      <select value={params.get("assignee") ?? ""} onChange={(e) => push({ assignee: e.target.value })} aria-label="担当" className={inputBase}>
-        <option value="">すべての担当</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>{u.name}</option>
-        ))}
-      </select>
-      <select value={params.get("project") ?? ""} onChange={(e) => push({ project: e.target.value })} aria-label="案件" className={`${inputBase} max-w-[260px]`}>
-        <option value="">すべての案件</option>
-        {projects.map((p) => (
-          <option key={p.id} value={p.id}>{p.name}</option>
-        ))}
-      </select>
-      {hasFilter ? <Link href={pathname} className="text-[13px] text-primary">条件をクリア</Link> : null}
+      {due ? <span>期限：{due.replace(/-/g, "/")}</span> : null}
+      <label>
+        担当：
+        <select value={params.get("assignee") ?? ""} onChange={(e) => push({ assignee: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        案件：
+        <select value={params.get("project") ?? ""} onChange={(e) => push({ project: e.target.value })} className="inp max-w-[260px]">
+          <option value="">すべて</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </label>
+      {hasFilter ? <Link href={pathname} className="btn btn-sm">クリア</Link> : null}
     </div>
   );
 }

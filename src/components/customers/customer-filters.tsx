@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import { inputBase } from "@/components/ui/field";
 import { CUSTOMER_TYPE_LABEL } from "@/lib/labels";
 
 export function CustomerFilters({ users }: { users: { id: string; name: string }[] }) {
@@ -32,29 +31,31 @@ export function CustomerFilters({ users }: { users: { id: string; name: string }
   const hasFilter = !!(params.get("q") || params.get("type") || params.get("owner"));
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <input
-        type="search"
-        value={q}
-        onChange={(e) => onChangeQ(e.target.value)}
-        placeholder="会社名・フリガナ・担当者・業種・タグで検索"
-        aria-label="検索"
-        className={`${inputBase} min-w-[220px] flex-1`}
-      />
-      <select value={params.get("type") ?? ""} onChange={(e) => push({ type: e.target.value })} aria-label="種別" className={inputBase}>
-        <option value="">すべての種別</option>
-        {Object.entries(CUSTOMER_TYPE_LABEL).map(([k, l]) => (
-          <option key={k} value={k}>{l}</option>
-        ))}
-      </select>
-      <select value={params.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} aria-label="社内担当" className={inputBase}>
-        <option value="">すべての担当</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>{u.name}</option>
-        ))}
-      </select>
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-surface-2 px-3 py-2 text-[12.5px]">
+      <label>
+        キーワード：
+        <input type="text" value={q} onChange={(e) => onChangeQ(e.target.value)} placeholder="会社名・フリガナ・担当者・業種・タグ" className="inp w-[240px]" />
+      </label>
+      <label>
+        種別：
+        <select value={params.get("type") ?? ""} onChange={(e) => push({ type: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          {Object.entries(CUSTOMER_TYPE_LABEL).map(([k, l]) => (
+            <option key={k} value={k}>{l}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        社内担当：
+        <select value={params.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+      </label>
       {hasFilter ? (
-        <Link href={pathname} className="text-[13px] text-primary" onClick={() => setQ("")}>条件をクリア</Link>
+        <Link href={pathname} className="btn btn-sm" onClick={() => setQ("")}>クリア</Link>
       ) : null}
     </div>
   );

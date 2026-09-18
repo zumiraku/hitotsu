@@ -38,14 +38,13 @@ export function ProjectForm({ action, initial, customers, users, submitLabel, ca
   const members = new Set(v("memberIds").split(",").filter(Boolean));
 
   return (
-    <form action={formAction} className="card">
-      <div className="card-body grid gap-4 sm:grid-cols-2">
-        {state?.message ? <p className="rounded-[7px] bg-bad-soft px-3 py-2 text-[13px] text-bad sm:col-span-2">{state.message}</p> : null}
-
-        <Field label="案件名" htmlFor="name" required errors={err("name")} className="sm:col-span-2">
-          <input id="name" name="name" defaultValue={v("name")} className={inputClass} aria-invalid={invalid("name")} autoFocus maxLength={120} placeholder="例：在庫管理システム刷新" />
+    <form action={formAction}>
+      {state?.message ? <p className="msg-bad mb-3">{state.message}</p> : null}
+      <div className="form">
+        <Field label="案件名" htmlFor="name" required errors={err("name")}>
+          <input id="name" name="name" defaultValue={v("name")} className={inputClass} aria-invalid={invalid("name")} autoFocus maxLength={120} />
         </Field>
-        <Field label="顧客・取引先" htmlFor="customerId" required errors={err("customerId")} className="sm:col-span-2">
+        <Field label="顧客・取引先" htmlFor="customerId" required errors={err("customerId")}>
           <select id="customerId" name="customerId" defaultValue={v("customerId")} className={inputClass} aria-invalid={invalid("customerId")}>
             <option value="">（選択してください）</option>
             {customers.map((c) => (
@@ -54,64 +53,62 @@ export function ProjectForm({ action, initial, customers, users, submitLabel, ca
           </select>
         </Field>
         <Field label="ステータス" htmlFor="status" required errors={err("status")}>
-          <select id="status" name="status" defaultValue={v("status")} className={inputClass}>
+          <select id="status" name="status" defaultValue={v("status")} className="inp">
             {STATUS_ORDER.map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </select>
         </Field>
         <Field label="優先度" htmlFor="priority" required errors={err("priority")}>
-          <select id="priority" name="priority" defaultValue={v("priority")} className={inputClass}>
+          <select id="priority" name="priority" defaultValue={v("priority")} className="inp">
             {Object.entries(PRIORITY_LABEL).map(([k, l]) => (
               <option key={k} value={k}>{l}</option>
             ))}
           </select>
         </Field>
         <Field label="担当" htmlFor="ownerId" errors={err("ownerId")}>
-          <select id="ownerId" name="ownerId" defaultValue={v("ownerId")} className={inputClass}>
+          <select id="ownerId" name="ownerId" defaultValue={v("ownerId")} className="inp">
             <option value="">（未割当）</option>
             {users.map((u) => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
         </Field>
+        <Field label="メンバー" errors={err("memberIds")}>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {users.map((u) => (
+              <label key={u.id} className="inline-flex cursor-pointer items-center gap-1">
+                <input type="checkbox" name="memberIds" value={u.id} defaultChecked={members.has(u.id)} />
+                {u.name}
+              </label>
+            ))}
+          </div>
+        </Field>
         {showAmount ? (
-          <Field label="金額（円・税込）" htmlFor="amount" errors={err("amount")}>
-            <input id="amount" name="amount" inputMode="numeric" defaultValue={v("amount")} className={`${inputClass} tnum`} aria-invalid={invalid("amount")} placeholder="例：1,200,000" />
+          <Field label="金額（円・税込）" htmlFor="amount" errors={err("amount")} hint="「1,200,000」「120万」のどちらの書き方でも登録できます。">
+            <input id="amount" name="amount" inputMode="numeric" defaultValue={v("amount")} className="inp tnum w-[200px]" aria-invalid={invalid("amount")} />
           </Field>
         ) : (
           <input type="hidden" name="amount" value={initial.amount} />
         )}
         <Field label="開始日" htmlFor="startDate" errors={err("startDate")}>
-          <input id="startDate" name="startDate" type="date" defaultValue={v("startDate")} className={inputClass} aria-invalid={invalid("startDate")} />
+          <input id="startDate" name="startDate" type="date" defaultValue={v("startDate")} className="inp" aria-invalid={invalid("startDate")} />
         </Field>
         <Field label="納期" htmlFor="dueDate" errors={err("dueDate")}>
-          <input id="dueDate" name="dueDate" type="date" defaultValue={v("dueDate")} className={inputClass} aria-invalid={invalid("dueDate")} />
+          <input id="dueDate" name="dueDate" type="date" defaultValue={v("dueDate")} className="inp" aria-invalid={invalid("dueDate")} />
         </Field>
-        <div className="sm:col-span-2">
-          <div className="text-[12.5px] text-muted">メンバー</div>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1.5">
-            {users.map((u) => (
-              <label key={u.id} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px]">
-                <input type="checkbox" name="memberIds" value={u.id} defaultChecked={members.has(u.id)} className="h-4 w-4 accent-primary" />
-                {u.name}
-              </label>
-            ))}
-          </div>
-          {err("memberIds")?.length ? <p className="mt-1 text-[12px] text-bad">{err("memberIds")!.join("、")}</p> : null}
-        </div>
-        <Field label="タグ" htmlFor="tags" errors={err("tags")} hint="カンマ区切り。例：システム, 保守" className="sm:col-span-2">
+        <Field label="タグ" htmlFor="tags" errors={err("tags")} hint="カンマ区切りで入力してください。（例：システム, 保守）">
           <input id="tags" name="tags" defaultValue={v("tags")} className={inputClass} aria-invalid={invalid("tags")} />
         </Field>
-        <Field label="概要" htmlFor="summary" errors={err("summary")} hint="目的、範囲、決まっていること、注意点など" className="sm:col-span-2">
+        <Field label="概要" htmlFor="summary" errors={err("summary")} hint="目的、範囲、決定事項、注意点など">
           <textarea id="summary" name="summary" defaultValue={v("summary")} rows={4} className={textareaClass} aria-invalid={invalid("summary")} maxLength={4000} />
         </Field>
       </div>
-      <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-        <Link href={cancelHref} className="btn">キャンセル</Link>
-        <button type="submit" disabled={pending} className="btn btn-primary disabled:opacity-60">
-          {pending ? "保存中…" : submitLabel}
+      <div className="mt-3 flex justify-center gap-2">
+        <button type="submit" disabled={pending} className="btn btn-primary min-w-[120px] justify-center">
+          {pending ? "処理中..." : submitLabel}
         </button>
+        <Link href={cancelHref} className="btn min-w-[120px] justify-center">キャンセル</Link>
       </div>
     </form>
   );

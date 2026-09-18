@@ -10,22 +10,6 @@ export const STATUS_LABEL: Record<ProjectStatus, string> = {
 
 export const STATUS_ORDER: ProjectStatus[] = ["LEAD", "ACTIVE", "HOLD", "DONE", "LOST"];
 
-export const STATUS_CLASS: Record<ProjectStatus, string> = {
-  LEAD: "bg-violet-soft text-violet",
-  ACTIVE: "bg-info-soft text-info",
-  HOLD: "bg-warn-soft text-warn",
-  DONE: "bg-good-soft text-good",
-  LOST: "bg-bad-soft text-bad",
-};
-
-export const STATUS_COLOR: Record<ProjectStatus, string> = {
-  LEAD: "var(--color-violet)",
-  ACTIVE: "var(--color-info)",
-  HOLD: "var(--color-warn)",
-  DONE: "var(--color-good)",
-  LOST: "var(--color-bad)",
-};
-
 export const PRIORITY_LABEL: Record<Priority, string> = { HIGH: "高", MID: "中", LOW: "低" };
 
 export const ROLE_LABEL: Record<Role, string> = {
