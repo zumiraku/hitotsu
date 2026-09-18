@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/icons";
 
 type Hit = { id: string; kind: string; title: string; sub: string; href: string };
 type Group = { kind: string; label: string; hits: Hit[]; total: number };
@@ -16,7 +15,7 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sel, setSel] = useState(0);
-  const wrap = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLFormElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abort = useRef<AbortController | null>(null);
 
@@ -65,37 +64,35 @@ export function GlobalSearch() {
     router.push(href);
   };
 
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`);
+  };
+
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setOpen(false);
       return;
     }
-    if (!open || !flat.length) {
-      if (e.key === "Enter" && q.trim()) go(`/search?q=${encodeURIComponent(q.trim())}`);
-      return;
-    }
+    if (!open || !flat.length) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSel((s) => (s + 1) % flat.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSel((s) => (s - 1 + flat.length) % flat.length);
-    } else if (e.key === "Enter") {
+    } else if (e.key === "Enter" && !(e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      if (e.metaKey || e.ctrlKey) go(`/search?q=${encodeURIComponent(q.trim())}`);
-      else go(flat[sel].href);
+      go(flat[sel].href);
     }
   };
 
   let index = 0;
   return (
-    <div ref={wrap} className="relative max-w-[560px] flex-1">
-      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted">
-        <Icon name="search" size={16} />
-      </span>
+    <form ref={wrap} onSubmit={submit} className="relative flex items-center gap-1">
       <input
         id="global-search"
-        type="search"
+        type="text"
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -105,29 +102,25 @@ export function GlobalSearch() {
           if (groups.length) setOpen(true);
         }}
         onKeyDown={onKey}
-        placeholder="検索（例：田中さんの今週期限のタスク）"
+        placeholder="キーワード検索"
         autoComplete="off"
         aria-label="検索"
-        className="h-9 w-full rounded-lg border border-line bg-surface-2 pl-[34px] pr-3 text-[13.5px] focus:border-primary focus:bg-surface focus:outline-none focus:ring-3 focus:ring-primary-soft"
+        className="h-[26px] w-full border border-[#999] bg-surface px-1.5 text-[12px] text-ink focus:outline-none md:w-[260px]"
       />
+      <button type="submit" className="h-[26px] whitespace-nowrap border border-white/70 px-2 text-[12px] text-white hover:bg-white/10">
+        検索
+      </button>
       {open ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-[70vh] overflow-auto rounded-[10px] border border-line bg-surface p-1.5 shadow-[0_12px_40px_rgba(18,28,40,0.22)]">
-          {chips.length ? (
-            <div className="mb-1 flex flex-wrap items-center gap-1.5 border-b border-line px-2.5 pb-2 pt-1.5 text-[11.5px] text-violet">
-              <Icon name="spark" size={13} />
-              {chips.map((c) => (
-                <span key={c} className="rounded-full bg-violet-soft px-2 py-0.5 font-bold">{c}</span>
-              ))}
-            </div>
-          ) : null}
+        <div className="absolute left-0 right-0 top-[calc(100%+2px)] z-30 max-h-[70vh] overflow-auto border border-[#888] bg-surface text-ink md:w-[420px]">
+          {chips.length ? <div className="border-b border-line-2 bg-surface-2 px-2 py-1 text-[11px] text-muted">検索条件：{chips.join("　")}</div> : null}
           {groups.length === 0 ? (
-            <p className="px-2.5 py-3 text-[13px] text-muted">{loading ? "検索中…" : `「${q}」に一致するものはありません`}</p>
+            <p className="px-2 py-2 text-[12px] text-muted">{loading ? "検索中..." : `「${q}」に該当するデータはありません。`}</p>
           ) : (
             <>
               {groups.map((g) => (
                 <div key={g.kind}>
-                  <div className="px-2.5 pb-0.5 pt-2 text-[11px] tracking-wider text-muted">
-                    {g.label} <span className="font-mono">{g.total}</span>
+                  <div className="bg-surface-3 px-2 py-0.5 text-[11px] font-bold">
+                    {g.label}（{g.total}）
                   </div>
                   {g.hits.map((h) => {
                     const i = index++;
@@ -137,22 +130,22 @@ export function GlobalSearch() {
                         type="button"
                         onMouseEnter={() => setSel(i)}
                         onClick={() => go(h.href)}
-                        className={`flex w-full items-baseline gap-2.5 rounded-md px-2.5 py-1.5 text-left ${i === sel ? "bg-surface-2" : ""}`}
+                        className={`flex w-full items-baseline gap-2 border-b border-line-2 px-2 py-1 text-left ${i === sel ? "bg-[#f3f7fc]" : ""}`}
                       >
-                        <span className="min-w-0 flex-1 truncate text-[13.5px]">{h.title}</span>
-                        <span className="max-w-[45%] truncate text-xs text-muted">{h.sub}</span>
+                        <span className="min-w-0 flex-1 truncate text-[12.5px] text-link">{h.title}</span>
+                        <span className="max-w-[45%] truncate text-[11px] text-muted">{h.sub}</span>
                       </button>
                     );
                   })}
                 </div>
               ))}
-              <button type="button" onClick={() => go(`/search?q=${encodeURIComponent(q.trim())}`)} className="mt-1 w-full rounded-md border-t border-line px-2.5 py-2 text-left text-[12.5px] text-primary hover:bg-surface-2">
-                「{q}」の検索結果をすべて見る
+              <button type="button" onClick={() => go(`/search?q=${encodeURIComponent(q.trim())}`)} className="w-full px-2 py-1.5 text-left text-[12px] text-link hover:bg-surface-2">
+                検索結果をすべて表示
               </button>
             </>
           )}
         </div>
       ) : null}
-    </div>
+    </form>
   );
 }

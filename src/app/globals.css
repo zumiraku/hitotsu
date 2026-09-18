@@ -1,121 +1,171 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-body), "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
-  --font-display: var(--font-display), "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-sans: "Meiryo", "メイリオ", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", "Yu Gothic", "游ゴシック", "MS PGothic", "ＭＳ Ｐゴシック", sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
 
-  --color-bg: #eef1f5;
+  --color-bg: #f4f4f4;
   --color-surface: #ffffff;
-  --color-surface-2: #f5f7fa;
-  --color-surface-3: #e9edf2;
-  --color-line: #d9dfe7;
-  --color-line-strong: #bfc8d3;
-  --color-ink: #18212d;
-  --color-ink-2: #425061;
-  --color-muted: #74818f;
+  --color-surface-2: #f7f7f7;
+  --color-surface-3: #e8e8e8;
+  --color-line: #cccccc;
+  --color-line-2: #dddddd;
+  --color-ink: #222222;
+  --color-ink-2: #444444;
+  --color-muted: #767676;
+  --color-link: #0066cc;
 
-  --color-primary: #1e5b85;
-  --color-primary-strong: #164866;
-  --color-primary-soft: #e1ecf5;
+  --color-primary: #2f5f9e;
+  --color-primary-strong: #244a7c;
+  --color-side: #ededed;
 
-  --color-side: #152a40;
-  --color-side-2: #1b3450;
-  --color-side-active: #2b4c6c;
-  --color-side-text: #c7d3e0;
-
-  --color-good: #1d7f49;
-  --color-good-soft: #dff2e6;
-  --color-warn: #a96a12;
-  --color-warn-soft: #fbeed7;
-  --color-bad: #b93b35;
-  --color-bad-soft: #f9e1df;
-  --color-info: #2a66a8;
-  --color-info-soft: #e2ecf8;
-  --color-violet: #6b4a9e;
-  --color-violet-soft: #ece6f6;
-  --color-neutral: #66727f;
-  --color-neutral-soft: #eaeef2;
-
-  --shadow-card: 0 1px 2px rgba(18, 28, 40, 0.06), 0 6px 20px rgba(18, 28, 40, 0.07);
-  --radius-card: 8px;
+  --color-bad: #cc0000;
+  --color-bad-bg: #fdecec;
+  --color-warn: #b35c00;
+  --color-warn-bg: #fff6e5;
+  --color-good: #1c7a1c;
+  --color-good-bg: #eaf6ea;
 }
 
-html,
-body {
-  height: 100%;
-}
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.6;
+  }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  text-wrap: balance;
-  line-height: 1.35;
-}
+  a {
+    color: var(--color-link);
+  }
+  a:hover {
+    text-decoration: underline;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  h1,
+  h2,
+  h3 {
+    line-height: 1.4;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
 }
 
 @layer components {
-  .card {
-    @apply rounded-card border border-line bg-surface;
+  .box {
+    @apply overflow-x-auto border border-line bg-surface;
   }
-  .card-head {
-    @apply flex items-center justify-between gap-3 border-b border-line px-4 py-3;
+  .box-head {
+    @apply flex items-center justify-between gap-2 border-b border-line bg-surface-3 px-3 py-1.5 text-[13px] font-bold;
   }
-  .card-body {
-    @apply px-4 py-3.5;
+  .box-body {
+    @apply px-3 py-3;
   }
-  .badge {
-    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 text-xs font-bold leading-5;
+  .ttl {
+    @apply mb-3 border-b border-line pb-1.5 text-[16px] font-bold;
+  }
+  .ttl span.sub {
+    @apply ml-3 text-[12px] font-normal text-muted;
   }
   .btn {
-    @apply inline-flex h-[34px] cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[7px] border border-line bg-surface px-3.5 text-[13.5px] font-bold text-ink hover:bg-surface-2;
+    @apply inline-flex h-[28px] cursor-pointer items-center whitespace-nowrap rounded-[2px] border border-[#999] bg-surface px-3 text-[13px] text-ink no-underline hover:bg-surface-2 hover:no-underline disabled:cursor-default disabled:opacity-60;
   }
   .btn-primary {
     @apply border-primary bg-primary text-white hover:border-primary-strong hover:bg-primary-strong;
   }
-  .avatar {
-    @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold text-white;
-    font-family: var(--font-display);
+  .btn-sm {
+    @apply h-[24px] px-2 text-[12px];
+  }
+  .lbl {
+    @apply inline-block whitespace-nowrap border border-line-2 bg-surface px-1 text-[11px] leading-[16px] text-ink-2;
+  }
+  .req {
+    @apply ml-1 inline-block bg-bad px-1 align-middle text-[10px] font-normal leading-[15px] text-white;
+  }
+  .msg-ok {
+    @apply border border-good bg-good-bg px-3 py-1.5 text-[13px] text-good;
+  }
+  .msg-bad {
+    @apply border border-bad bg-bad-bg px-3 py-1.5 text-[13px] text-bad;
+  }
+  .msg-warn {
+    @apply border border-warn bg-warn-bg px-3 py-1.5 text-[13px] text-warn;
+  }
+  .inp {
+    @apply h-[28px] rounded-[2px] border border-[#999] bg-surface px-1.5 text-[13px] focus:border-primary focus:outline-none aria-invalid:border-bad disabled:bg-surface-2 disabled:text-muted;
+  }
+  .txt {
+    @apply w-full rounded-[2px] border border-[#999] bg-surface px-1.5 py-1 text-[13px] leading-relaxed focus:border-primary focus:outline-none aria-invalid:border-bad;
   }
   .tnum {
     font-variant-numeric: tabular-nums;
+  }
+  .dlg {
+    @apply m-auto border border-[#888] bg-surface p-0 text-ink backdrop:bg-black/40;
+  }
+  .dlg-head {
+    @apply flex items-center justify-between border-b border-line bg-surface-3 px-3 py-1.5 text-[13px] font-bold;
+  }
+  .dlg-foot {
+    @apply flex items-center justify-end gap-2 border-t border-line bg-surface-2 px-3 py-2;
   }
 }
 
 @layer components {
   .tbl {
-    @apply w-full border-collapse text-[13.5px];
+    @apply w-full border-collapse border border-line text-[13px];
   }
   .th {
-    @apply whitespace-nowrap border-b border-line bg-surface-2 px-3 py-2.5 text-left text-[11.5px] font-bold tracking-wider text-muted;
+    @apply whitespace-nowrap border border-line bg-surface-3 px-2 py-1.5 text-left text-[12px] font-bold;
   }
   .td {
-    @apply border-b border-line px-3 py-2.5 align-middle;
+    @apply border border-line-2 px-2 py-1.5 align-middle;
   }
   .tr-link:hover .td {
-    @apply bg-surface-2;
+    @apply bg-[#f3f7fc];
   }
-  .dl {
-    @apply grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1.5 text-[13.5px];
+  .form {
+    @apply border border-line border-b-0;
   }
-  .dl dt {
-    @apply whitespace-nowrap text-muted;
+  .frow {
+    @apply grid grid-cols-1 border-b border-line sm:grid-cols-[170px_1fr];
   }
-  .dl dd {
-    @apply min-w-0 break-words;
+  .flabel {
+    @apply bg-surface-2 px-3 py-2 text-[12.5px] font-bold sm:border-r sm:border-line-2;
+  }
+  .fval {
+    @apply px-3 py-2;
+  }
+  .side-link {
+    @apply block border-l-4 border-transparent px-3 py-1.5 text-[13px] text-ink no-underline hover:bg-surface hover:no-underline;
+  }
+  .side-link.active {
+    @apply border-primary bg-surface font-bold;
+  }
+}
+
+@layer components {
+  /* 詳細画面の項目名／値の表 */
+  .kv {
+    @apply w-full border-collapse text-[13px];
+  }
+  .kv th {
+    @apply border-b border-line-2 bg-surface-2 px-3 py-1.5 text-left align-top font-bold whitespace-nowrap;
+  }
+  .kv td {
+    @apply border-b border-line-2 px-3 py-1.5 align-top break-words;
+  }
+  .kv tr:last-child th,
+  .kv tr:last-child td {
+    @apply border-b-0;
   }
 }

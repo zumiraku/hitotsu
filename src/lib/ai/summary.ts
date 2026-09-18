@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { daysLeft, daysSince, startOfToday } from "@/lib/format";
 import { liveProject } from "@/lib/scope";
 
-// ダッシュボードの「今日のまとめ」。数字は DB から、文章はルールで組み立てる
+// ホーム画面の「本日の状況」。件数は DB から取り、文章は定型で組み立てる
 export async function dailySummary(userId: string) {
   const today = startOfToday();
   const utc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -21,8 +21,8 @@ export async function dailySummary(userId: string) {
   if (overdue) parts.push(`期限超過のタスクが${overdue}件`);
   if (todayTasks) parts.push(`今日期限が${todayTasks}件`);
   let text = parts.length ? parts.join("、") + "あります。" : "期限超過のタスクはありません。";
-  if (stale.length) text += `「${stale.slice(0, 3).map((p) => short(p.customer.name)).join("」「")}」の案件は2週間以上動きがないので、一度連絡を入れておくと安心です。`;
-  if (dueSoon.length) text += `納期1週間以内の案件が${dueSoon.length}件（${dueSoon.slice(0, 3).map((p) => short(p.customer.name)).join("、")}）。`;
-  if (mineOverdue[0]) text += `まずはご自身の「${mineOverdue[0].title}」から片付けるのがおすすめです。`;
+  if (stale.length) text += `「${stale.slice(0, 3).map((p) => short(p.customer.name)).join("」「")}」の案件は2週間以上対応履歴がありません。`;
+  if (dueSoon.length) text += `納期まで1週間以内の案件が${dueSoon.length}件あります。（${dueSoon.slice(0, 3).map((p) => short(p.customer.name)).join("、")}）`;
+  if (mineOverdue[0]) text += `ご自身の担当では「${mineOverdue[0].title}」が期限を迎えています。`;
   return text;
 }

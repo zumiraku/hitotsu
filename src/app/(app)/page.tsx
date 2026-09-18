@@ -1,17 +1,13 @@
 import Link from "next/link";
 import { AddActivityButton } from "@/components/activities/activity-item-menu";
-import { Icon } from "@/components/icons";
-import { CategoryBadge } from "@/components/notes/note-card";
-import { TaskRow } from "@/components/tasks/task-row";
-import { Avatar } from "@/components/ui/avatar";
-import { StatusBadge } from "@/components/ui/badge";
+import { TaskRow, TaskTableHead } from "@/components/tasks/task-row";
+import { StatusLabel } from "@/components/ui/badge";
 import { activityOptions } from "@/lib/activity-options";
-import { aiEnabled } from "@/lib/ai/provider";
 import { dailySummary } from "@/lib/ai/summary";
 import { currentUser } from "@/lib/current-user";
 import { db } from "@/lib/db";
-import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday, toInputDate } from "@/lib/format";
-import { ACTIVITY_LABEL, STATUS_COLOR, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
+import { WEEKDAY, daysLeft, endOfWeek, fmtDate, fmtDateTime, startOfToday } from "@/lib/format";
+import { ACTIVITY_LABEL, NOTE_CATEGORY_LABEL, STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 import { can } from "@/lib/permissions";
 import { projectAlerts } from "@/lib/project-alerts";
 import { liveProject, liveRefs } from "@/lib/scope";
@@ -19,34 +15,18 @@ import { taskInclude, toTaskItem } from "@/lib/task-item";
 
 export const dynamic = "force-dynamic";
 
-function Kpi({ label, value, hint, tone, href }: { label: string; value: number; hint: string; tone: "info" | "bad" | "warn" | "good" | "plain"; href: string }) {
-  const toneText = { info: "text-info", bad: "text-bad", warn: "text-warn", good: "text-good", plain: "" }[tone];
-  const toneBar = { info: "bg-info", bad: "bg-bad", warn: "bg-warn", good: "bg-good", plain: "bg-line" }[tone];
-  return (
-    <Link href={href} className="card relative overflow-hidden px-3.5 py-3 hover:border-line-strong">
-      <span className={`absolute inset-y-0 left-0 w-[3px] ${toneBar}`} />
-      <div className="text-xs text-muted">{label}</div>
-      <div className={`tnum font-display text-[28px] font-bold leading-tight ${toneText}`}>
-        {value}
-        <span className="ml-0.5 font-sans text-[13px] font-medium text-muted">件</span>
-      </div>
-      <div className="text-xs text-muted">{hint}</div>
-    </Link>
-  );
-}
-
-export default async function DashboardPage() {
+export default async function HomePage() {
   const me = await currentUser();
   const today = startOfToday();
   const weekEnd = endOfWeek();
   const utc = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
-  const [projects, openTasks, customerCount, recentActivities, statusCounts, monthActivities, users, actOptions, pinnedNotes, summary] = await Promise.all([
+  const [projects, openTasks, customerCount, recentActivities, statusCounts, users, actOptions, pinnedNotes, summary] = await Promise.all([
     db.project.findMany({
       where: { deletedAt: null, status: { in: ["ACTIVE", "HOLD", "LEAD"] } },
       include: {
         customer: { select: { name: true } },
-        owner: { select: { name: true, color: true } },
+        owner: { select: { name: true } },
         tasks: { where: { done: false, dueDate: { lt: utc(today) } }, select: { id: true } },
         activities: { orderBy: { occurredAt: "desc" }, take: 1, select: { occurredAt: true } },
       },
@@ -56,13 +36,12 @@ export default async function DashboardPage() {
     db.customer.count({ where: { deletedAt: null } }),
     db.activity.findMany({
       where: liveRefs,
-      take: 7,
+      take: 8,
       orderBy: { occurredAt: "desc" },
-      include: { user: { select: { name: true, color: true } }, project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } },
+      include: { user: { select: { name: true } }, project: { select: { id: true, name: true } }, customer: { select: { id: true, name: true } } },
     }),
     db.project.groupBy({ by: ["status"], where: { deletedAt: null }, _count: { _all: true } }),
-    db.activity.count({ where: { occurredAt: { gte: new Date(today.getFullYear(), today.getMonth(), 1) }, ...liveRefs } }),
-    db.user.findMany({ where: { isActive: true }, select: { id: true, name: true, color: true }, orderBy: { name: "asc" } }),
+    db.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     activityOptions(),
     db.note.findMany({ where: { pinned: true, ...liveRefs }, include: { author: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
     dailySummary(me.id),
@@ -84,12 +63,6 @@ export default async function DashboardPage() {
   const total = statusCounts.reduce((s, c) => s + c._count._all, 0);
   const countOf = (s: (typeof STATUS_ORDER)[number]) => statusCounts.find((c) => c.status === s)?._count._all ?? 0;
 
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + i);
-    return { d, n: withDue.filter((t) => daysLeft(t.dueDate!) === i).length };
-  });
-
   const load = users
     .map((u) => {
       const ts = openTasks.filter((t) => t.assigneeId === u.id);
@@ -97,199 +70,244 @@ export default async function DashboardPage() {
     })
     .filter((x) => x.open > 0)
     .sort((a, b) => b.open - a.open);
-  const maxLoad = Math.max(1, ...load.map((x) => x.open));
 
   const now = new Date();
-  const greet = now.getHours() < 11 ? "おはようございます" : now.getHours() < 18 ? "こんにちは" : "お疲れさまです";
+  const summaryRows: [string, number, string][] = [
+    ["進行中の案件", active.length, "/projects?status=ACTIVE"],
+    ["要確認の案件", attention.length, "/projects?status=open"],
+    ["期限超過のタスク", overdue.length, "/tasks?show=overdue"],
+    ["今週が期限のタスク", thisWeek.length, "/tasks?show=week"],
+    ["自分の未完了タスク", mine.length, "/tasks?show=mine"],
+  ];
 
   return (
     <div>
-      <div className="mb-3.5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">{greet}、{me.name.split(" ")[0]}さん</h1>
-          <div className="text-[13px] text-muted">
-            {now.getFullYear()}年{now.getMonth() + 1}月{now.getDate()}日（{WEEKDAY[now.getDay()]}）　顧客・取引先 {customerCount}社
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {can(me, "edit") ? <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link> : null}
+      <div className="ttl flex flex-wrap items-end justify-between gap-2">
+        <h1>
+          ホーム
+          <span className="sub">
+            {now.getFullYear()}年{now.getMonth() + 1}月{now.getDate()}日（{WEEKDAY[now.getDay()]}）
+          </span>
+        </h1>
+        <div className="flex gap-1.5 pb-0.5">
+          {can(me, "edit") ? <Link href="/projects/new" className="btn">案件登録</Link> : null}
           {can(me, "activity") ? <AddActivityButton options={actOptions} /> : null}
         </div>
       </div>
 
-      <div className="mb-3.5 flex items-start gap-2.5 rounded-[7px] bg-violet-soft px-3 py-2.5 text-[13px] text-violet">
-        <Icon name="spark" size={16} className="mt-0.5 shrink-0" />
-        <div><b>今日のまとめ</b>　{summary}</div>
+      <div className="box mb-4">
+        <div className="box-head">本日の状況</div>
+        <div className="box-body text-[13px]">{summary}</div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <Kpi label="進行中の案件" value={active.length} hint={`全${total}件中`} tone="info" href="/projects?status=ACTIVE" />
-        <Kpi label="期限超過のタスク" value={overdue.length} hint={overdue.length ? "要対応" : "すべて期限内"} tone={overdue.length ? "bad" : "good"} href="/tasks?show=overdue" />
-        <Kpi label="今週が期限のタスク" value={thisWeek.length} hint={`${fmtDate(weekEnd).slice(5)}まで`} tone="warn" href="/tasks?show=week" />
-        <Kpi label="要確認の案件" value={attention.length} hint="超過・放置・保留" tone={attention.length ? "warn" : "good"} href="/projects?status=open" />
-        <Kpi label="自分の未完了タスク" value={mine.length} hint={mineOverdue ? `うち超過 ${mineOverdue}件` : "超過なし"} tone={mineOverdue ? "bad" : "plain"} href="/tasks?show=mine" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex flex-col gap-4">
-          <section className="card">
-            <div className="card-head">
-              <h2 className="text-[15px] font-bold">3日以内の期限・超過 <span className="ml-1 font-mono text-xs font-normal text-muted">{focus.length}</span></h2>
-              <Link href="/tasks" className="text-xs text-primary">すべて見る</Link>
+          <div className="box">
+            <div className="box-head">
+              <span>期限が近いタスク（3日以内・期限超過）　{focus.length}件</span>
+              <Link href="/tasks" className="text-[12px] font-normal">タスク一覧へ</Link>
             </div>
-            <div className="card-body flex flex-col gap-1.5">
-              {focus.length === 0 ? <p className="py-4 text-center text-[13px] text-muted">3日以内に期限を迎えるタスクはありません</p> : focus.slice(0, 8).map((t) => <TaskRow key={t.id} task={toTaskItem(t)} readOnly={!can(me, "activity")} />)}
-              {focus.length > 8 ? <Link href="/tasks" className="mt-1 text-center text-xs text-primary">残り{focus.length - 8}件を見る</Link> : null}
-            </div>
-          </section>
-
-          <section className="card">
-            <div className="card-head">
-              <h2 className="text-[15px] font-bold">要確認の案件 <span className="ml-1 font-mono text-xs font-normal text-muted">{attention.length}</span></h2>
-              <Link href="/projects?status=open" className="text-xs text-primary">すべて見る</Link>
-            </div>
-            <div className="card-body">
-              {attention.length === 0 ? (
-                <p className="py-4 text-center text-[13px] text-muted">要確認の案件はありません</p>
+            <div className="box-body">
+              {focus.length === 0 ? (
+                <p className="text-muted">3日以内に期限を迎えるタスクはありません。</p>
               ) : (
-                <ul className="divide-y divide-line">
-                  {attention.map(({ p, reasons }) => (
-                    <li key={p.id} className="flex items-center gap-2.5 py-2.5">
-                      {p.owner ? <Avatar name={p.owner.name} color={p.owner.color} /> : null}
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/projects/${p.id}`} className="block truncate font-bold hover:underline">{p.name}</Link>
-                        <div className="truncate text-xs text-muted">
-                          {p.customer.name} ·{" "}
+                <table className="tbl">
+                  <TaskTableHead />
+                  <tbody>
+                    {focus.slice(0, 10).map((t) => (
+                      <TaskRow key={t.id} task={toTaskItem(t)} readOnly={!can(me, "activity")} />
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {focus.length > 10 ? (
+                <p className="mt-1 text-right text-[12px]">
+                  <Link href="/tasks">残り{focus.length - 10}件を表示</Link>
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="box">
+            <div className="box-head">
+              <span>要確認の案件　{attention.length}件</span>
+              <Link href="/projects?status=open" className="text-[12px] font-normal">案件一覧へ</Link>
+            </div>
+            <div className="box-body">
+              {attention.length === 0 ? (
+                <p className="text-muted">要確認の案件はありません。</p>
+              ) : (
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th className="th">案件名</th>
+                      <th className="th">顧客</th>
+                      <th className="th">担当</th>
+                      <th className="th">ステータス</th>
+                      <th className="th">確認事項</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attention.map(({ p, reasons }) => (
+                      <tr key={p.id} className="tr-link">
+                        <td className="td">
+                          <Link href={`/projects/${p.id}`}>{p.name}</Link>
+                        </td>
+                        <td className="td">{p.customer.name}</td>
+                        <td className="td whitespace-nowrap">{p.owner?.name ?? "未割当"}</td>
+                        <td className="td whitespace-nowrap"><StatusLabel status={p.status} /></td>
+                        <td className="td">
                           {reasons.map((r, i) => (
                             <span key={r.text} className={r.level === "bad" ? "text-bad" : "text-warn"}>
-                              {i > 0 ? " / " : ""}{r.text}
+                              {i > 0 ? "、" : ""}
+                              {r.text}
                             </span>
                           ))}
-                        </div>
-                      </div>
-                      <StatusBadge status={p.status} />
-                    </li>
-                  ))}
-                </ul>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
-          </section>
+          </div>
+
+          <div className="box">
+            <div className="box-head">最近の対応履歴</div>
+            <div className="box-body">
+              {recentActivities.length === 0 ? (
+                <p className="text-muted">対応履歴はまだありません。</p>
+              ) : (
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th className="th">日時</th>
+                      <th className="th">種別</th>
+                      <th className="th">担当</th>
+                      <th className="th">案件・顧客</th>
+                      <th className="th">内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentActivities.map((a) => (
+                      <tr key={a.id}>
+                        <td className="td tnum whitespace-nowrap">{fmtDateTime(a.occurredAt)}</td>
+                        <td className="td whitespace-nowrap">{ACTIVITY_LABEL[a.type]}</td>
+                        <td className="td whitespace-nowrap">{a.user?.name}</td>
+                        <td className="td">
+                          {a.project ? <Link href={`/projects/${a.project.id}`}>{a.project.name}</Link> : a.customer ? <Link href={`/customers/${a.customer.id}`}>{a.customer.name}</Link> : null}
+                        </td>
+                        <td className="td">
+                          <span className="line-clamp-2">{a.body}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4">
-          <section className="card">
-            <div className="card-head"><h2 className="text-[15px] font-bold">案件ステータス</h2></div>
-            <div className="card-body">
-              <div className="my-1.5 flex h-3 overflow-hidden rounded-full bg-surface-3">
-                {STATUS_ORDER.filter((s) => countOf(s) > 0).map((s) => (
-                  <Link key={s} href={`/projects?status=${s}`} style={{ width: `${(countOf(s) / Math.max(total, 1)) * 100}%`, background: STATUS_COLOR[s] }} title={`${STATUS_LABEL[s]} ${countOf(s)}件`} />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px] text-ink-2">
-                {STATUS_ORDER.map((s) => (
-                  <Link key={s} href={`/projects?status=${s}`} className="hover:underline">
-                    <i className="mr-1.5 inline-block h-[9px] w-[9px] rounded-[2px] align-middle" style={{ background: STATUS_COLOR[s] }} />
-                    {STATUS_LABEL[s]} <b className="tnum">{countOf(s)}</b>
-                  </Link>
-                ))}
-              </div>
+          <div className="box">
+            <div className="box-head">集計</div>
+            <div className="box-body">
+              <table className="tbl">
+                <tbody>
+                  {summaryRows.map(([label, n, href]) => (
+                    <tr key={label}>
+                      <th className="th font-normal">{label}</th>
+                      <td className="td tnum w-24 text-right">
+                        <Link href={href}>{n}</Link> 件
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <th className="th font-normal">顧客・取引先</th>
+                    <td className="td tnum text-right">
+                      <Link href="/customers">{customerCount}</Link> 社
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              {mineOverdue ? <p className="mt-2 text-[12px] text-bad">自分の担当で期限超過のタスクが {mineOverdue} 件あります。</p> : null}
+            </div>
+          </div>
 
-              <h3 className="mt-4 text-[13.5px] font-bold">今後14日の期限</h3>
-              <div className="mt-2 grid grid-cols-14 gap-1">
-                {days.map(({ d }) => (
-                  <div key={"w" + d.getTime()} className="text-center text-[10px] text-muted">{WEEKDAY[d.getDay()]}</div>
-                ))}
-                {days.map(({ d, n }, i) => (
-                  <Link
-                    key={d.getTime()}
-                    href={`/tasks?due=${toInputDate(utc(d))}`}
-                    title={`${fmtDate(utc(d))}：期限のタスク ${n}件`}
-                    className={`tnum flex aspect-square items-center justify-center rounded text-[11px] hover:ring-2 hover:ring-primary ${
-                      n >= 3 ? "bg-info font-bold text-white" : n > 0 ? "bg-info-soft font-bold text-info" : "bg-surface-3 text-muted"
-                    } ${i === 0 ? "outline outline-2 -outline-offset-2 outline-primary" : ""} ${d.getDay() === 0 || d.getDay() === 6 ? "opacity-60" : ""}`}
-                  >
-                    {d.getDate()}
-                  </Link>
-                ))}
-              </div>
+          <div className="box">
+            <div className="box-head">案件ステータス別件数</div>
+            <div className="box-body">
+              <table className="tbl">
+                <tbody>
+                  {STATUS_ORDER.map((s) => (
+                    <tr key={s}>
+                      <th className="th font-normal">{STATUS_LABEL[s]}</th>
+                      <td className="td tnum w-24 text-right">
+                        <Link href={`/projects?status=${s}`}>{countOf(s)}</Link> 件
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <th className="th">合計</th>
+                    <td className="td tnum text-right font-bold">{total} 件</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-          </section>
+          </div>
 
-          <section className="card">
-            <div className="card-head"><h2 className="text-[15px] font-bold">担当者別の未完了タスク</h2></div>
-            <div className="card-body flex flex-col gap-2">
-              {load.length === 0 ? <p className="py-2 text-center text-[13px] text-muted">未完了のタスクはありません</p> : null}
-              {load.map(({ u, open, overdue: od }) => (
-                <Link key={u.id} href={`/tasks?assignee=${u.id}`} className="flex items-center gap-2.5 text-[13px] hover:underline">
-                  <Avatar name={u.name} color={u.color} size={22} />
-                  <span className="w-24 shrink-0 truncate">{u.name}</span>
-                  <span className="flex h-2.5 flex-1 overflow-hidden rounded-full bg-surface-3">
-                    <span className="bg-bad" style={{ width: `${(od / maxLoad) * 100}%` }} />
-                    <span className="bg-info" style={{ width: `${((open - od) / maxLoad) * 100}%` }} />
-                  </span>
-                  <span className="tnum w-20 shrink-0 text-right text-xs text-muted">
-                    <b className="text-ink">{open}</b>件{od ? <span className="text-bad">（超過{od}）</span> : null}
-                  </span>
-                </Link>
-              ))}
+          <div className="box">
+            <div className="box-head">担当者別の未完了タスク</div>
+            <div className="box-body">
+              {load.length === 0 ? (
+                <p className="text-muted">未完了のタスクはありません。</p>
+              ) : (
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th className="th">担当者</th>
+                      <th className="th text-right">未完了</th>
+                      <th className="th text-right">期限超過</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {load.map(({ u, open, overdue: od }) => (
+                      <tr key={u.id}>
+                        <td className="td">
+                          <Link href={`/tasks?assignee=${u.id}`}>{u.name}</Link>
+                        </td>
+                        <td className="td tnum text-right">{open}</td>
+                        <td className={`td tnum text-right ${od ? "text-bad" : ""}`}>{od}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-          </section>
-
-          <section className="card">
-            <div className="card-head">
-              <h2 className="text-[15px] font-bold">最近の対応履歴</h2>
-              <span className="text-xs text-muted">今月 {monthActivities}件</span>
-            </div>
-            <div className="card-body">
-              <ul className="divide-y divide-line">
-                {recentActivities.map((a) => (
-                  <li key={a.id} className="flex gap-2.5 py-2.5">
-                    {a.user ? <Avatar name={a.user.name} color={a.user.color} /> : null}
-                    <div className="min-w-0 flex-1 text-[13px]">
-                      <div className="flex flex-wrap gap-1.5 text-xs text-muted">
-                        <b className="text-ink">{a.user?.name.split(" ")[0]}</b>
-                        <span className="rounded-full border border-line px-2 text-[11px]">{ACTIVITY_LABEL[a.type]}</span>
-                        <span>{fmtDateTime(a.occurredAt)}</span>
-                      </div>
-                      <div className="mt-0.5 line-clamp-2">
-                        {a.project ? <Link href={`/projects/${a.project.id}`} className="text-primary hover:underline">{a.project.name}</Link> : a.customer ? <Link href={`/customers/${a.customer.id}`} className="text-primary hover:underline">{a.customer.name}</Link> : null}
-                        {a.project || a.customer ? "　" : ""}
-                        {a.body}
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
+          </div>
 
           {pinnedNotes.length ? (
-            <section className="card">
-              <div className="card-head">
-                <h2 className="text-[15px] font-bold">ピン留めメモ</h2>
-                <Link href="/notes?pinned=1" className="text-xs text-primary">すべて見る</Link>
+            <div className="box">
+              <div className="box-head">
+                <span>ピン留めメモ</span>
+                <Link href="/notes?pinned=1" className="text-[12px] font-normal">メモ一覧へ</Link>
               </div>
-              <div className="card-body">
-                <ul className="divide-y divide-line">
+              <div className="box-body">
+                <ul className="text-[13px]">
                   {pinnedNotes.map((n) => (
-                    <li key={n.id} className="py-2">
-                      <Link href={`/notes#note-${n.id}`} className="flex items-start gap-2 hover:underline">
-                        <CategoryBadge category={n.category} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[13.5px] font-bold">{n.title}</span>
-                          <span className="block truncate text-xs text-muted">{n.author?.name.split(" ")[0]} · {n.body.split("\n")[0]}</span>
-                        </span>
-                      </Link>
+                    <li key={n.id} className="border-b border-line-2 py-1 last:border-b-0">
+                      <span className="lbl mr-1.5">{NOTE_CATEGORY_LABEL[n.category]}</span>
+                      <Link href={`/notes#note-${n.id}`}>{n.title}</Link>
+                      <span className="ml-2 text-[11px] text-muted">
+                        {n.author?.name}　{fmtDate(n.updatedAt)}
+                      </span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </section>
+            </div>
           ) : null}
-
-          <p className="text-[12px] text-muted">
-            AI アシスト：{aiEnabled() ? "有効（引き継ぎメモの文章整形と検索の解釈に使用）" : "ルールベースで動作中。API キーを設定すると文章整形と検索の解釈が有効になります"}
-          </p>
         </div>
       </div>
     </div>

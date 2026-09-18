@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { createTask, deleteTask, toggleTask, updateTask } from "@/actions/tasks";
-import { Icon } from "@/components/icons";
 import { TaskDialog, type TaskInitial, type TaskOptions } from "@/components/tasks/task-dialog";
-import { Avatar } from "@/components/ui/avatar";
 
 export type TaskItem = {
   id: string;
@@ -17,9 +15,10 @@ export type TaskItem = {
   dueHint: string; // "あと3日" など
   daysLeft: number | null;
   project: { id: string; name: string } | null;
-  assignee: { id: string; name: string; color: string } | null;
+  assignee: { id: string; name: string } | null;
 };
 
+// 一覧表の1行。thead 側の列は呼び出し元で揃えること（チェック／タスク名／案件／担当／期限／操作）
 export function TaskRow({ task, options, showProject = true, readOnly = false }: { task: TaskItem; options?: TaskOptions; showProject?: boolean; readOnly?: boolean }) {
   const router = useRouter();
   const [done, setDone] = useState(task.done);
@@ -53,72 +52,66 @@ export function TaskRow({ task, options, showProject = true, readOnly = false }:
   };
 
   const n = task.daysLeft;
-  const dueClass = done ? "text-muted" : n !== null && n < 0 ? "font-bold text-bad" : n !== null && n <= 3 ? "font-bold text-warn" : "text-muted";
+  const dueClass = done ? "text-muted" : n !== null && n < 0 ? "text-bad" : n !== null && n <= 3 ? "text-warn" : "";
 
   return (
-    <div className={`group flex items-center gap-2.5 rounded-[7px] border border-line bg-surface px-3 py-2 ${pending ? "opacity-70" : ""}`}>
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={done}
-        aria-label={done ? "未完了に戻す" : "完了にする"}
-        onClick={toggle}
-        disabled={pending || readOnly}
-        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border transition-colors ${done ? "border-good bg-good text-white" : "border-line-strong bg-surface hover:border-good"} ${readOnly ? "cursor-default opacity-70" : ""}`}
-      >
-        {done ? <Icon name="check" size={12} strokeWidth={2.4} /> : null}
-      </button>
-      <div className="min-w-0 flex-1">
-        <div className={`truncate font-bold ${done ? "text-muted line-through" : ""}`}>{task.title}</div>
-        <div className="truncate text-xs text-muted">
-          {showProject && task.project ? (
-            <>
-              <Link href={`/projects/${task.project.id}`} className="hover:underline">{task.project.name}</Link>
-              {" · "}
-            </>
-          ) : null}
-          {task.assignee?.name ?? "未割当"}
-          {error ? <span className="ml-2 text-bad">{error}</span> : null}
-        </div>
-      </div>
-      {task.assignee ? <Avatar name={task.assignee.name} color={task.assignee.color} /> : null}
-      <div className="tnum w-[84px] shrink-0 text-right text-[13px] leading-tight">
-        {done ? (
-          <span className="text-muted">完了</span>
-        ) : task.dueDate ? (
+    <tr className={`tr-link ${pending ? "opacity-60" : ""}`}>
+      <td className="td text-center">
+        <input type="checkbox" checked={done} onChange={toggle} disabled={pending || readOnly} aria-label={done ? "未完了に戻す" : "完了にする"} className="align-middle" />
+      </td>
+      <td className="td">
+        <span className={done ? "text-muted line-through" : ""}>{task.title}</span>
+        {error ? <span className="ml-2 text-[12px] text-bad">{error}</span> : null}
+      </td>
+      {showProject ? <td className="td">{task.project ? <Link href={`/projects/${task.project.id}`}>{task.project.name}</Link> : <span className="text-muted">－</span>}</td> : null}
+      <td className="td whitespace-nowrap">{task.assignee?.name ?? <span className="text-muted">未割当</span>}</td>
+      <td className={`td tnum whitespace-nowrap ${dueClass}`}>
+        {done ? "完了" : task.dueDate ? (
           <>
-            <div className={n !== null && n < 0 ? "text-bad" : ""}>{task.dueText}</div>
-            <div className={`text-[11px] ${dueClass}`}>{task.dueHint}</div>
+            {task.dueText}
+            <span className="ml-1 text-[11px]">（{task.dueHint}）</span>
           </>
         ) : (
           <span className="text-muted">期限なし</span>
         )}
-      </div>
+      </td>
       {options ? (
-        <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-          <button type="button" onClick={() => setEditing(true)} aria-label="編集" title="編集" className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-ink">
-            <Icon name="edit" size={15} />
-          </button>
-          <button type="button" onClick={remove} aria-label="削除" title="削除" className="flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-bad-soft hover:text-bad">
-            <Icon name="trash" size={15} />
-          </button>
-        </div>
+        <td className="td whitespace-nowrap text-center">
+          <button type="button" onClick={() => setEditing(true)} className="text-link hover:underline">編集</button>
+          <span className="mx-1 text-muted">|</span>
+          <button type="button" onClick={remove} className="text-link hover:underline">削除</button>
+          {editing ? (
+            <TaskDialog
+              title="タスクの編集"
+              action={updateTask.bind(null, task.id)}
+              options={options}
+              submitLabel="更新"
+              onClose={closeEdit}
+              initial={{ title: task.title, projectId: task.project?.id ?? "", assigneeId: task.assignee?.id ?? "", dueDate: task.dueDate ?? "" }}
+            />
+          ) : null}
+        </td>
       ) : null}
-      {editing && options ? (
-        <TaskDialog
-          title="タスクを編集"
-          action={updateTask.bind(null, task.id)}
-          options={options}
-          submitLabel="保存する"
-          onClose={closeEdit}
-          initial={{ title: task.title, projectId: task.project?.id ?? "", assigneeId: task.assignee?.id ?? "", dueDate: task.dueDate ?? "" }}
-        />
-      ) : null}
-    </div>
+    </tr>
   );
 }
 
-export function AddTaskButton({ options, preset, label = "＋ タスクを追加", className = "btn btn-primary" }: { options: TaskOptions; preset?: Partial<TaskInitial>; label?: string; className?: string }) {
+export function TaskTableHead({ showProject = true, actions = false }: { showProject?: boolean; actions?: boolean }) {
+  return (
+    <thead>
+      <tr>
+        <th className="th w-8"></th>
+        <th className="th">タスク名</th>
+        {showProject ? <th className="th">案件</th> : null}
+        <th className="th">担当</th>
+        <th className="th">期限</th>
+        {actions ? <th className="th w-24">操作</th> : null}
+      </tr>
+    </thead>
+  );
+}
+
+export function AddTaskButton({ options, preset, label = "タスク登録", className = "btn" }: { options: TaskOptions; preset?: Partial<TaskInitial>; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (
@@ -126,10 +119,10 @@ export function AddTaskButton({ options, preset, label = "＋ タスクを追加
       <button type="button" onClick={() => setOpen(true)} className={className}>{label}</button>
       {open ? (
         <TaskDialog
-          title="タスクを追加"
+          title="タスクの登録"
           action={createTask}
           options={options}
-          submitLabel="追加する"
+          submitLabel="登録"
           onClose={close}
           initial={{ title: "", projectId: "", assigneeId: "", dueDate: "", ...preset }}
         />

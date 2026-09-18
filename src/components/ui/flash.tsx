@@ -21,5 +21,5 @@ export function Flash({ messages }: { messages: Record<string, string> }) {
   }, [key, params, pathname, router]);
 
   if (!key) return null;
-  return <p className="mb-3 rounded-[7px] bg-good-soft px-3 py-2 text-[13px] text-good">{messages[key]}</p>;
+  return <p className="msg-ok mb-3">{messages[key]}</p>;
 }

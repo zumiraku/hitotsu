@@ -9,11 +9,9 @@ export default async function PasswordPage({ searchParams }: { searchParams: Pro
   const { first } = await searchParams;
   const me = await currentUser();
   return (
-    <div className="mx-auto max-w-md">
+    <div className="max-w-xl">
       <PageHeader title="パスワードの変更" sub={me.email} />
-      {first === "1" || me.mustChangePassword ? (
-        <p className="mb-3 rounded-[7px] bg-warn-soft px-3 py-2 text-[13px] text-warn">仮パスワードでログインしています。先に自分のパスワードを設定してください</p>
-      ) : null}
+      {first === "1" || me.mustChangePassword ? <p className="msg-warn mb-3">仮パスワードでログインしています。先にご自身のパスワードを設定してください。</p> : null}
       <PasswordForm />
     </div>
   );

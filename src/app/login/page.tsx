@@ -14,17 +14,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const samples = process.env.NODE_ENV !== "production" ? await db.user.findMany({ where: { isActive: true, email: { endsWith: "@example.com" } }, select: { email: true, name: true, role: true }, orderBy: { role: "asc" } }) : [];
 
   return (
-    <main className="flex min-h-full items-center justify-center px-4 py-10">
-      <div className="w-full max-w-[400px]">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[11px] bg-gradient-to-br from-[#4c8dc2] to-[#1e5b85] font-display text-[21px] font-bold text-white">ヒ</div>
-          <div>
-            <div className="font-display text-[20px] font-bold tracking-wider">ヒトツ</div>
-            <div className="text-[12px] tracking-wider text-muted">業務を、ひとつに。</div>
-          </div>
+    <main className="flex min-h-full flex-col">
+      <div className="bg-primary px-4 py-2.5 text-[15px] font-bold text-white">ヒトツ 業務管理システム</div>
+      <div className="flex flex-1 items-start justify-center px-4 py-10">
+        <div className="w-full max-w-[420px]">
+          <LoginForm next={sp.next ?? ""} expired={sp.expired === "1"} samples={samples} />
         </div>
-        <LoginForm next={sp.next ?? ""} expired={sp.expired === "1"} samples={samples} />
       </div>
+      <footer className="border-t border-line bg-surface px-4 py-2 text-center text-[11px] text-muted">ヒトツ 業務管理システム Ver.{process.env.NEXT_PUBLIC_APP_VERSION ?? "1.0.0"}</footer>
     </main>
   );
 }

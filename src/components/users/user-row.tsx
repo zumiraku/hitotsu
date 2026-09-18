@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Role } from "@/generated/prisma/enums";
 import { changeRole, resetPassword, setActive, updateProfile } from "@/actions/users";
-import { Avatar } from "@/components/ui/avatar";
-import { inputBase } from "@/components/ui/field";
 import { ROLE_LABEL } from "@/lib/labels";
 import { ROLE_ORDER } from "@/lib/permissions";
 
@@ -15,14 +13,11 @@ export type UserRowData = {
   email: string;
   department: string | null;
   role: Role;
-  color: string;
   isActive: boolean;
   mustChangePassword: boolean;
   lastLoginText: string;
   activeProjects: number;
 };
-
-const ROLE_CLASS: Record<Role, string> = { ADMIN: "bg-bad-soft text-bad", MANAGER: "bg-info-soft text-info", MEMBER: "bg-good-soft text-good", VIEWER: "bg-neutral-soft text-neutral" };
 
 export function UserRow({ user, isMe }: { user: UserRowData; isMe: boolean }) {
   const router = useRouter();
@@ -41,13 +36,13 @@ export function UserRow({ user, isMe }: { user: UserRowData; isMe: boolean }) {
     });
 
   const onReset = () => {
-    if (!window.confirm(`${user.name} さんのパスワードをリセットして仮パスワードを発行します。本人のログイン中セッションは解除されます。よろしいですか？`)) return;
-    run(() => resetPassword(user.id), (r) => `仮パスワード：${r.password}（この画面を閉じると再表示できません）`);
+    if (!window.confirm(`${user.name} さんのパスワードをリセットして仮パスワードを発行します。\n本人のログイン中のセッションは解除されます。よろしいですか？`)) return;
+    run(() => resetPassword(user.id), (r) => `仮パスワード：${r.password}　（この画面を閉じると再表示できません）`);
   };
 
   const onToggleActive = () => {
     const next = !user.isActive;
-    if (!window.confirm(next ? `${user.name} さんを有効にします。` : `${user.name} さんを無効にします。ログインできなくなり、担当中のデータはそのまま残ります。`)) return;
+    if (!window.confirm(next ? `${user.name} さんを有効にします。よろしいですか？` : `${user.name} さんを無効にします。ログインできなくなりますが、担当中のデータはそのまま残ります。よろしいですか？`)) return;
     run(() => setActive(user.id, next));
   };
 
@@ -65,67 +60,62 @@ export function UserRow({ user, isMe }: { user: UserRowData; isMe: boolean }) {
     });
   };
 
+  const link = "text-link hover:underline disabled:opacity-50";
+
   return (
     <>
-      <tr className={`tr-link ${user.isActive ? "" : "opacity-60"} ${pending ? "opacity-60" : ""}`}>
-        <td className="td">
-          {editing ? (
-            <form onSubmit={onSaveProfile} className="flex flex-wrap items-center gap-1.5">
-              <input name="name" defaultValue={user.name} aria-label="名前" className={`${inputBase} h-8 w-36`} required maxLength={50} />
-              <input name="department" defaultValue={user.department ?? ""} aria-label="所属" placeholder="所属" className={`${inputBase} h-8 w-36`} maxLength={50} />
-              <button type="submit" className="btn h-8 px-2.5 text-[12.5px]">保存</button>
-              <button type="button" onClick={() => setEditing(false)} className="btn h-8 px-2.5 text-[12.5px]">取消</button>
+      <tr className={`tr-link ${!user.isActive || pending ? "text-muted" : ""}`}>
+        {editing ? (
+          <td className="td" colSpan={3}>
+            <form onSubmit={onSaveProfile} className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
+              氏名：
+              <input name="name" defaultValue={user.name} className="inp w-36" required maxLength={50} />
+              所属：
+              <input name="department" defaultValue={user.department ?? ""} className="inp w-36" maxLength={50} />
+              <button type="submit" className="btn btn-sm">更新</button>
+              <button type="button" onClick={() => setEditing(false)} className="btn btn-sm">取消</button>
             </form>
-          ) : (
-            <span className="flex items-center gap-2.5">
-              <Avatar name={user.name} color={user.color} />
-              <span className="min-w-0">
-                <span className="block font-bold">
-                  {user.name}
-                  {isMe ? <span className="ml-1.5 text-[11px] font-normal text-muted">（自分）</span> : null}
-                </span>
-                <span className="block truncate text-xs text-muted">{user.email}</span>
-              </span>
-            </span>
-          )}
-        </td>
-        <td className="td whitespace-nowrap">{user.department || <span className="text-muted">—</span>}</td>
+          </td>
+        ) : (
+          <>
+            <td className="td whitespace-nowrap">
+              {user.name}
+              {isMe ? <span className="ml-1 text-[11px] text-muted">（自分）</span> : null}
+            </td>
+            <td className="td break-all">{user.email}</td>
+            <td className="td whitespace-nowrap">{user.department || <span className="text-muted">－</span>}</td>
+          </>
+        )}
         <td className="td">
-          <select
-            value={user.role}
-            onChange={(e) => run(() => changeRole(user.id, e.target.value as Role))}
-            disabled={pending}
-            aria-label="ロール"
-            className={`h-7 cursor-pointer rounded-full border border-line pl-2.5 pr-7 text-[12.5px] font-bold disabled:opacity-60 ${ROLE_CLASS[user.role]}`}
-          >
+          <select value={user.role} onChange={(e) => run(() => changeRole(user.id, e.target.value as Role))} disabled={pending} aria-label="ロール" className="inp">
             {ROLE_ORDER.map((r) => (
               <option key={r} value={r}>{ROLE_LABEL[r]}</option>
             ))}
           </select>
         </td>
-        <td className="td">
-          {user.isActive ? <span className="badge bg-good-soft text-good">有効</span> : <span className="badge bg-neutral-soft text-neutral">無効</span>}
-          {user.mustChangePassword ? <span className="ml-1 badge bg-warn-soft text-warn">仮PW</span> : null}
+        <td className="td whitespace-nowrap">
+          {user.isActive ? "有効" : "無効"}
+          {user.mustChangePassword ? <span className="lbl ml-1">仮パスワード</span> : null}
         </td>
         <td className="td tnum text-right">{user.activeProjects}</td>
-        <td className="td tnum whitespace-nowrap text-muted">{user.lastLoginText}</td>
-        <td className="td">
-          <span className="flex justify-end gap-1">
-            <button type="button" onClick={() => setEditing(true)} disabled={pending || editing} className="btn h-7 px-2.5 text-[12.5px]">編集</button>
-            <button type="button" onClick={onReset} disabled={pending} className="btn h-7 px-2.5 text-[12.5px]">PW再発行</button>
-            {!isMe ? (
-              <button type="button" onClick={onToggleActive} disabled={pending} className={`btn h-7 px-2.5 text-[12.5px] ${user.isActive ? "text-bad" : ""}`}>
+        <td className="td tnum whitespace-nowrap">{user.lastLoginText}</td>
+        <td className="td whitespace-nowrap text-[12.5px]">
+          <button type="button" onClick={() => setEditing(true)} disabled={pending || editing} className={link}>編集</button>
+          <span className="mx-1 text-muted">|</span>
+          <button type="button" onClick={onReset} disabled={pending} className={link}>パスワード再発行</button>
+          {!isMe ? (
+            <>
+              <span className="mx-1 text-muted">|</span>
+              <button type="button" onClick={onToggleActive} disabled={pending} className={link}>
                 {user.isActive ? "無効化" : "有効化"}
               </button>
-            ) : null}
-          </span>
+            </>
+          ) : null}
         </td>
       </tr>
       {notice ? (
         <tr>
-          <td colSpan={7} className={`px-3 pb-2 text-[12.5px] ${notice.kind === "ok" ? "text-good" : "text-bad"}`}>
-            {notice.kind === "ok" ? <span className="font-mono">{notice.text}</span> : notice.text}
-          </td>
+          <td colSpan={8} className={`td text-[12.5px] ${notice.kind === "ok" ? "text-good" : "text-bad"}`}>{notice.text}</td>
         </tr>
       ) : null}
     </>

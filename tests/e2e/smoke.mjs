@@ -25,7 +25,7 @@ try {
   await page.fill("#password", "password");
   await page.click('button[type="submit"]');
   await page.waitForURL((u) => u.pathname === "/");
-  check("ログインしてダッシュボード", await page.locator("text=今日のまとめ").count() > 0);
+  check("ログインしてホーム", await page.locator("text=本日の状況").count() > 0);
 
   await page.goto(base + "/customers");
   check("顧客一覧", (await page.locator("tbody tr").count()) > 0);
@@ -34,16 +34,16 @@ try {
   check("顧客詳細", (await page.locator("h1").count()) === 1);
 
   await page.goto(base + "/projects?view=board");
-  check("案件ボード", (await page.locator(".grid-flow-col > div").count()) === 5);
+  check("案件ボード", (await page.locator(".board > div").count()) === 5);
 
   await page.goto(base + "/tasks");
-  const first = page.locator('[role="checkbox"]').first();
-  const before = await first.getAttribute("aria-checked");
-  await first.click();
+  const boxes = page.locator('tbody input[type="checkbox"]');
+  const countBefore = await boxes.count();
+  await boxes.first().click();
   await page.waitForTimeout(800);
   await page.reload();
-  const afterToggle = await page.locator('[role="checkbox"]').first().getAttribute("aria-checked");
-  check("タスクの完了切り替え", before !== null && afterToggle !== null);
+  const countAfter = await page.locator('tbody input[type="checkbox"]').count();
+  check("タスクの完了切り替え", countBefore > 0 && countAfter === countBefore - 1, `${countBefore} -> ${countAfter}`);
 
   await page.goto(base + "/search?q=" + encodeURIComponent("期限切れ"));
   check("自然文検索", (await page.locator("section").count()) > 0);
@@ -58,7 +58,7 @@ try {
   check("変更履歴（マネージャー）", (await page.locator("tbody tr").count()) > 0);
 
   await page.goto(base + "/data");
-  check("データ入出力", (await page.locator("text=CSV エクスポート").count()) > 0);
+  check("データ入出力", (await page.locator("text=CSV出力").count()) > 0);
 
   await page.click("text=ログアウト");
   await page.waitForURL(/\/login/);

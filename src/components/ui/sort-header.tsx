@@ -7,9 +7,9 @@ export function SortHeader({ label, field, sort, dir, makeHref, className = "" }
   const nextDir = active && dir === "asc" ? "desc" : "asc";
   return (
     <th className={`th ${className}`}>
-      <Link href={makeHref({ sort: field, dir: nextDir })} className={`inline-flex items-center gap-1 hover:text-ink ${active ? "text-ink" : ""}`}>
+      <Link href={makeHref({ sort: field, dir: nextDir })} className="text-ink">
         {label}
-        {active ? <span className="text-[10px]">{dir === "asc" ? "▲" : "▼"}</span> : null}
+        {active ? <span className="ml-0.5 text-[10px]">{dir === "asc" ? "▲" : "▼"}</span> : null}
       </Link>
     </th>
   );

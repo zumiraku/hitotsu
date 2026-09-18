@@ -14,13 +14,13 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = await db.project.findUnique({ where: { id }, select: { name: true } });
-  return { title: p ? `${p.name} を編集` : "編集" };
+  return { title: p ? `${p.name} の編集` : "編集" };
 }
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const me = await currentUser();
-  if (!can(me, "edit")) return <Forbidden title="案件を編集" need="一般以上" />;
+  if (!can(me, "edit")) return <Forbidden title="案件の編集" need="一般以上" />;
   const [p, customers, users] = await Promise.all([
     db.project.findFirst({ where: { id, deletedAt: null }, include: { members: { select: { userId: true } } } }),
     db.customer.findMany({ where: { deletedAt: null }, select: { id: true, name: true }, orderBy: { kana: "asc" } }),
@@ -29,16 +29,17 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
   if (!p) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <Link href={`/projects/${p.id}`} className="mb-2 inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-ink">
-        <span aria-hidden>←</span> {p.name}
-      </Link>
-      <PageHeader title="案件を編集" sub={p.code} />
+    <div className="max-w-4xl">
+      <p className="mb-1 text-[12px]">
+        <Link href={`/projects/${p.id}`}>« {p.name}</Link>
+      </p>
+      <PageHeader title="案件の編集" sub={p.code} />
+      <p className="mb-2 text-[12px] text-muted">※ 「必須」の項目は必ず入力してください。</p>
       <ProjectForm
         action={updateProject.bind(null, p.id)}
         customers={customers}
         users={users}
-        submitLabel="保存する"
+        submitLabel="更新"
         showAmount={can(me, "amount")}
         cancelHref={`/projects/${p.id}`}
         initial={{

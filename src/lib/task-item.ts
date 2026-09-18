@@ -7,7 +7,7 @@ type TaskLike = {
   done: boolean;
   dueDate: Date | null;
   project: { id: string; name: string } | null;
-  assignee: { id: string; name: string; color: string } | null;
+  assignee: { id: string; name: string } | null;
 };
 
 // Client Component に渡せる形（Date を含まない）に変換する
@@ -27,5 +27,5 @@ export function toTaskItem(t: TaskLike): TaskItem {
 
 export const taskInclude = {
   project: { select: { id: true, name: true } },
-  assignee: { select: { id: true, name: true, color: true } },
+  assignee: { select: { id: true, name: true } },
 } as const;

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import { inputBase } from "@/components/ui/field";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/labels";
 
 type Opt = { id: string; name: string };
@@ -33,36 +32,54 @@ export function ProjectFilters({ users, customers }: { users: Opt[]; customers: 
   };
 
   const hasFilter = !!(params.get("q") || params.get("status") || params.get("owner") || params.get("customer"));
-  const segBtn = (on: boolean) => `h-8 px-3 text-[13px] ${on ? "bg-primary-soft font-bold text-primary" : "bg-surface text-ink-2 hover:bg-surface-2"}`;
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="inline-flex overflow-hidden rounded-[7px] border border-line">
-        <button type="button" onClick={() => push({ view: "" })} className={segBtn(view === "list")}>一覧</button>
-        <button type="button" onClick={() => push({ view: "board" })} className={segBtn(view === "board")}>ボード</button>
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-surface-2 px-3 py-2 text-[12.5px]">
+      <span className="flex items-center gap-x-3">
+        表示：
+        <label className="inline-flex cursor-pointer items-center gap-1">
+          <input type="radio" name="view" checked={view === "list"} onChange={() => push({ view: "" })} />
+          一覧
+        </label>
+        <label className="inline-flex cursor-pointer items-center gap-1">
+          <input type="radio" name="view" checked={view === "board"} onChange={() => push({ view: "board" })} />
+          ボード
+        </label>
       </span>
-      <input type="search" value={q} onChange={(e) => onChangeQ(e.target.value)} placeholder="案件名・コード・顧客名・タグで検索" aria-label="検索" className={`${inputBase} min-w-[200px] flex-1`} />
-      <select value={params.get("status") ?? ""} onChange={(e) => push({ status: e.target.value })} aria-label="ステータス" className={inputBase}>
-        <option value="">すべてのステータス</option>
-        <option value="open">進行中・見込み・保留</option>
-        {STATUS_ORDER.map((s) => (
-          <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-        ))}
-      </select>
-      <select value={params.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} aria-label="担当" className={inputBase}>
-        <option value="">すべての担当</option>
-        {users.map((u) => (
-          <option key={u.id} value={u.id}>{u.name}</option>
-        ))}
-      </select>
-      <select value={params.get("customer") ?? ""} onChange={(e) => push({ customer: e.target.value })} aria-label="顧客" className={`${inputBase} max-w-[220px]`}>
-        <option value="">すべての顧客</option>
-        {customers.map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
+      <label>
+        キーワード：
+        <input type="text" value={q} onChange={(e) => onChangeQ(e.target.value)} placeholder="案件名・コード・顧客名・タグ" className="inp w-[220px]" />
+      </label>
+      <label>
+        ステータス：
+        <select value={params.get("status") ?? ""} onChange={(e) => push({ status: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          <option value="open">見込み・進行中・保留</option>
+          {STATUS_ORDER.map((s) => (
+            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        担当：
+        <select value={params.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>{u.name}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        顧客：
+        <select value={params.get("customer") ?? ""} onChange={(e) => push({ customer: e.target.value })} className="inp max-w-[220px]">
+          <option value="">すべて</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </label>
       {hasFilter ? (
-        <Link href={view === "board" ? `${pathname}?view=board` : pathname} className="text-[13px] text-primary" onClick={() => setQ("")}>条件をクリア</Link>
+        <Link href={view === "board" ? `${pathname}?view=board` : pathname} className="btn btn-sm" onClick={() => setQ("")}>クリア</Link>
       ) : null}
     </div>
   );

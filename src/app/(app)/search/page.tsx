@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { Icon } from "@/components/icons";
-import { Empty } from "@/components/ui/empty";
 import { PageHeader } from "@/components/ui/page-header";
 import { smartSearch } from "@/lib/ai/smart-search";
 import { KIND_LABEL, type SearchKind } from "@/lib/search";
@@ -8,7 +6,6 @@ import { KIND_LABEL, type SearchKind } from "@/lib/search";
 export const metadata = { title: "検索" };
 export const dynamic = "force-dynamic";
 
-const KIND_ICON: Record<SearchKind, string> = { customer: "customers", project: "projects", task: "tasks", note: "notes", file: "files", activity: "memo" };
 const KINDS = Object.keys(KIND_LABEL) as SearchKind[];
 
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string; kind?: string }> }) {
@@ -20,47 +17,44 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <div>
-      <PageHeader title={q ? `「${q}」の検索結果` : "検索"} sub={q ? `${total}件` : "上の検索ボックスから、顧客・案件・タスク・メモ・ファイル・対応履歴を横断して探せます"} />
-      {chips.length ? (
-        <p className="mb-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-violet">
-          <Icon name="spark" size={14} />
-          こう解釈しました：
-          {chips.map((c) => (
-            <span key={c} className="rounded-full bg-violet-soft px-2 py-0.5 font-bold">{c}</span>
-          ))}
-        </p>
-      ) : null}
+      <PageHeader title="検索結果" sub={q ? `「${q}」　${total}件` : undefined} />
+      {!q ? <p className="text-[13px] text-muted">画面上部の検索欄にキーワードを入力してください。顧客・案件・タスク・メモ・ファイル・対応履歴を横断して検索します。</p> : null}
+      {chips.length ? <p className="mb-2 text-[12px] text-muted">検索条件：{chips.join("　")}</p> : null}
       {q ? (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          <Link href={`/search?q=${encodeURIComponent(q)}`} className={`badge ${!kind ? "bg-primary-soft text-primary" : "bg-surface-3 text-ink-2"}`}>すべて</Link>
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 border border-line bg-surface-2 px-3 py-2 text-[12.5px]">
+          対象：
+          {!kind ? <b>すべて</b> : <Link href={`/search?q=${encodeURIComponent(q)}`}>すべて</Link>}
           {KINDS.map((k) => (
-            <Link key={k} href={`/search?q=${encodeURIComponent(q)}&kind=${k}`} className={`badge ${kind === k ? "bg-primary-soft text-primary" : "bg-surface-3 text-ink-2"}`}>{KIND_LABEL[k]}</Link>
+            <span key={k}>{kind === k ? <b>{KIND_LABEL[k]}</b> : <Link href={`/search?q=${encodeURIComponent(q)}&kind=${k}`}>{KIND_LABEL[k]}</Link>}</span>
           ))}
         </div>
       ) : null}
       {q && groups.length === 0 ? (
-        <div className="card"><Empty>「{q}」に一致するものはありません。別の言葉や、社名の一部で試してみてください</Empty></div>
+        <div className="box">
+          <div className="box-body text-muted">「{q}」に該当するデータはありません。別のキーワードや社名の一部でお試しください。</div>
+        </div>
       ) : (
         <div className="flex flex-col gap-4">
           {groups.map((g) => (
-            <section key={g.kind} className="card">
-              <div className="card-head">
-                <h2 className="flex items-center gap-2 text-[15px] font-bold">
-                  <Icon name={KIND_ICON[g.kind]} size={16} className="text-muted" />
-                  {g.label} <span className="font-mono text-xs font-normal text-muted">{g.total}</span>
-                </h2>
-                {!kind && g.total > g.hits.length ? <Link href={`/search?q=${encodeURIComponent(q)}&kind=${g.kind}`} className="text-xs text-primary">すべて見る（{g.total}件）</Link> : null}
+            <section key={g.kind} className="box">
+              <div className="box-head">
+                <span>
+                  {g.label}（{g.total}件）
+                </span>
+                {!kind && g.total > g.hits.length ? <Link href={`/search?q=${encodeURIComponent(q)}&kind=${g.kind}`} className="text-[12px] font-normal">すべて表示</Link> : null}
               </div>
-              <ul className="divide-y divide-line">
-                {g.hits.map((h) => (
-                  <li key={h.id}>
-                    <Link href={h.href} className="block px-4 py-2.5 hover:bg-surface-2">
-                      <div className="truncate text-[13.5px] font-bold">{h.title}</div>
-                      <div className="truncate text-xs text-muted">{h.sub}</div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full border-collapse text-[13px]">
+                <tbody>
+                  {g.hits.map((h) => (
+                    <tr key={h.id} className="border-b border-line-2 last:border-b-0">
+                      <td className="px-3 py-1.5">
+                        <Link href={h.href}>{h.title}</Link>
+                      </td>
+                      <td className="px-3 py-1.5 text-[12px] text-muted">{h.sub}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </section>
           ))}
         </div>

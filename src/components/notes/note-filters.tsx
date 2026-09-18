@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import { inputBase } from "@/components/ui/field";
 import { NOTE_CATEGORY_LABEL } from "@/lib/labels";
 
 export function NoteFilters() {
@@ -32,22 +31,26 @@ export function NoteFilters() {
     timer.current = setTimeout(() => push({ q: value }), 250);
   };
 
-  const seg = (on: boolean) => `h-8 px-3 text-[13px] ${on ? "bg-primary-soft font-bold text-primary" : "bg-surface text-ink-2 hover:bg-surface-2"}`;
-
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <input type="search" value={q} onChange={(e) => onChangeQ(e.target.value)} placeholder="タイトル・本文で検索" aria-label="検索" className={`${inputBase} min-w-[220px] flex-1`} />
-      <span className="inline-flex overflow-hidden rounded-[7px] border border-line">
-        <button type="button" onClick={() => push({ category: "" })} className={seg(!category)}>すべて</button>
-        {Object.entries(NOTE_CATEGORY_LABEL).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => push({ category: k })} className={seg(category === k)}>{l}</button>
-        ))}
-      </span>
-      <label className="inline-flex cursor-pointer items-center gap-1.5 text-[13px]">
-        <input type="checkbox" checked={pinned} onChange={(e) => push({ pinned: e.target.checked ? "1" : "" })} className="h-4 w-4 accent-primary" />
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-surface-2 px-3 py-2 text-[12.5px]">
+      <label>
+        キーワード：
+        <input type="text" value={q} onChange={(e) => onChangeQ(e.target.value)} placeholder="タイトル・本文" className="inp w-[220px]" />
+      </label>
+      <label>
+        種類：
+        <select value={category} onChange={(e) => push({ category: e.target.value })} className="inp">
+          <option value="">すべて</option>
+          {Object.entries(NOTE_CATEGORY_LABEL).map(([k, l]) => (
+            <option key={k} value={k}>{l}</option>
+          ))}
+        </select>
+      </label>
+      <label className="inline-flex cursor-pointer items-center gap-1">
+        <input type="checkbox" checked={pinned} onChange={(e) => push({ pinned: e.target.checked ? "1" : "" })} />
         ピン留めのみ
       </label>
-      {q || category || pinned ? <Link href={pathname} className="text-[13px] text-primary" onClick={() => setQ("")}>条件をクリア</Link> : null}
+      {q || category || pinned ? <Link href={pathname} className="btn btn-sm" onClick={() => setQ("")}>クリア</Link> : null}
     </div>
   );
 }

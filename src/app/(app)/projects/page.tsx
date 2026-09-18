@@ -2,11 +2,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import type { ProjectStatus } from "@/generated/prisma/enums";
-import { Icon } from "@/components/icons";
 import { Board, type BoardCard } from "@/components/projects/board";
 import { ProjectFilters } from "@/components/projects/project-filters";
-import { UserChip } from "@/components/ui/avatar";
-import { StatusBadge } from "@/components/ui/badge";
+import { StatusLabel } from "@/components/ui/badge";
 import { Empty } from "@/components/ui/empty";
 import { Flash } from "@/components/ui/flash";
 import { PageHeader } from "@/components/ui/page-header";
@@ -25,6 +23,7 @@ export const dynamic = "force-dynamic";
 const PER_PAGE = 20;
 const SORTS: Record<string, (dir: "asc" | "desc") => Prisma.ProjectOrderByWithRelationInput[]> = {
   updated: (dir) => [{ updatedAt: dir }],
+  code: (dir) => [{ code: dir }],
   name: (dir) => [{ name: dir }],
   customer: (dir) => [{ customer: { kana: dir } }, { name: "asc" }],
   status: (dir) => [{ status: dir }, { dueDate: "asc" }],
@@ -75,7 +74,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
 
   const include = {
     customer: { select: { name: true } },
-    owner: { select: { name: true, color: true } },
+    owner: { select: { name: true } },
     tasks: { select: { done: true, dueDate: true } },
     activities: { orderBy: { occurredAt: "desc" as const }, take: 1, select: { occurredAt: true } },
   };
@@ -114,28 +113,28 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
     return `/projects?${next.toString()}`;
   };
   const sortProps = { sort, dir, makeHref };
-  const filtering = !!(q || statusParam || owner || customer);
+  const showAmount = can(me, "amount");
 
   const cards: BoardCard[] = enriched.map((p) => ({
     id: p.id,
+    code: p.code,
     name: p.name,
     status: p.status,
-    customerName: p.customer.name.replace(/(株式会社|合同会社|有限会社|医療法人)/g, "").trim(),
-    owner: p.owner,
-    dueLabel: p.dueDate ? fmtDate(p.dueDate).slice(5) : null,
+    customerName: p.customer.name,
+    ownerName: p.owner?.name ?? null,
+    dueText: p.dueDate ? fmtDate(p.dueDate) : null,
     overdue: !isClosed(p.status) && !!p.dueDate && daysLeft(p.dueDate) < 0,
     openTasks: p.open,
-    alertCount: p.alerts.length,
-    alertLevel: p.alerts.some((a) => a.level === "bad") ? "bad" : p.alerts.length ? "warn" : null,
+    alerts: p.alerts.map((a) => a.text),
   }));
 
   return (
     <div>
-      <PageHeader title="案件" sub={`${total}件${filtering ? "（絞り込み中）" : ""}`}>
-        {can(me, "edit") ? <Link href="/projects/new" className="btn btn-primary">＋ 案件を追加</Link> : null}
+      <PageHeader title="案件一覧" sub={`${total}件`}>
+        {can(me, "edit") ? <Link href="/projects/new" className="btn">新規登録</Link> : null}
       </PageHeader>
       <Suspense>
-        <Flash messages={{ deleted: "削除しました" }} />
+        <Flash messages={{ deleted: "削除しました。" }} />
         <ProjectFilters users={users} customers={customers} />
       </Suspense>
 
@@ -143,25 +142,26 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
         <Board cards={cards} canDrag={can(me, "edit")} />
       ) : (
         <>
-          <div className="card overflow-x-auto">
+          <div className="overflow-x-auto">
             <table className="tbl">
               <thead>
                 <tr>
+                  <SortHeader label="コード" field="code" {...sortProps} />
                   <SortHeader label="案件名" field="name" {...sortProps} />
                   <SortHeader label="顧客" field="customer" {...sortProps} />
                   <SortHeader label="ステータス" field="status" {...sortProps} />
                   <SortHeader label="優先度" field="priority" {...sortProps} />
                   <SortHeader label="担当" field="owner" {...sortProps} />
                   <SortHeader label="納期" field="due" {...sortProps} />
-                  {can(me, "amount") ? <SortHeader label="金額" field="amount" {...sortProps} className="text-right" /> : null}
-                  <th className="th text-right">タスク</th>
-                  <th className="th"></th>
+                  {showAmount ? <SortHeader label="金額" field="amount" {...sortProps} className="text-right" /> : null}
+                  <th className="th text-right">未完了タスク</th>
+                  <th className="th">要確認</th>
                 </tr>
               </thead>
               <tbody>
                 {enriched.length === 0 ? (
                   <tr>
-                    <td colSpan={9}><Empty>該当する案件がありません</Empty></td>
+                    <td colSpan={showAmount ? 10 : 9} className="td"><Empty>該当する案件はありません。</Empty></td>
                   </tr>
                 ) : (
                   enriched.map((p) => {
@@ -169,33 +169,28 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
                     const n = p.dueDate ? daysLeft(p.dueDate) : null;
                     return (
                       <tr key={p.id} className="tr-link">
+                        <td className="td tnum whitespace-nowrap">{p.code}</td>
                         <td className="td">
-                          <Link href={`/projects/${p.id}`} className="font-bold hover:underline">{p.name}</Link>
-                          <div className="font-mono text-xs text-muted">{p.code}</div>
+                          <Link href={`/projects/${p.id}`}>{p.name}</Link>
                         </td>
                         <td className="td">{p.customer.name}</td>
-                        <td className="td"><StatusBadge status={p.status} /></td>
-                        <td className="td whitespace-nowrap">
-                          <span className={`mr-1.5 inline-block h-2 w-2 rounded-[2px] align-middle ${p.priority === "HIGH" ? "bg-bad" : p.priority === "MID" ? "bg-warn" : "bg-neutral"}`} />
-                          {PRIORITY_LABEL[p.priority]}
-                        </td>
-                        <td className="td"><UserChip user={p.owner} /></td>
-                        <td className="td tnum whitespace-nowrap">
-                          {!p.dueDate ? <span className="text-muted">—</span> : closed ? <span className="text-muted">{fmtDate(p.dueDate)}</span> : (
-                            <span className={n !== null && n < 0 ? "text-bad" : ""}>
+                        <td className="td whitespace-nowrap"><StatusLabel status={p.status} /></td>
+                        <td className={`td whitespace-nowrap text-center ${p.priority === "HIGH" ? "text-bad" : ""}`}>{PRIORITY_LABEL[p.priority]}</td>
+                        <td className="td whitespace-nowrap">{p.owner?.name ?? <span className="text-muted">未割当</span>}</td>
+                        <td className={`td tnum whitespace-nowrap ${!closed && n !== null && n < 0 ? "text-bad" : ""}`}>
+                          {!p.dueDate ? <span className="text-muted">－</span> : (
+                            <>
                               {fmtDate(p.dueDate)}
-                              <div className={`text-[11px] ${n !== null && n < 0 ? "font-bold text-bad" : n !== null && n <= 3 ? "font-bold text-warn" : "text-muted"}`}>{dueLabel(p.dueDate)}</div>
-                            </span>
+                              {!closed ? <span className="ml-1 text-[11px]">（{dueLabel(p.dueDate)}）</span> : null}
+                            </>
                           )}
                         </td>
-                        {can(me, "amount") ? <td className="td tnum text-right">{yen(p.amount)}</td> : null}
-                        <td className="td tnum text-right whitespace-nowrap">{p.open}<span className="text-xs text-muted">/{p.tasks.length}</span></td>
-                        <td className="td">
-                          {p.alerts.length ? (
-                            <span className={`badge ${p.alerts.some((a) => a.level === "bad") ? "bg-bad-soft text-bad" : "bg-warn-soft text-warn"}`} title={p.alerts.map((a) => a.text).join(" / ")}>
-                              <Icon name="alert" size={12} />{p.alerts.length}
-                            </span>
-                          ) : null}
+                        {showAmount ? <td className="td tnum whitespace-nowrap text-right">{yen(p.amount)}</td> : null}
+                        <td className="td tnum whitespace-nowrap text-right">
+                          {p.open} / {p.tasks.length}
+                        </td>
+                        <td className="td text-[12px]">
+                          {p.alerts.length ? <span className={p.alerts.some((a) => a.level === "bad") ? "text-bad" : "text-warn"}>{p.alerts.map((a) => a.text).join("、")}</span> : null}
                         </td>
                       </tr>
                     );
@@ -204,10 +199,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-muted">
-            <span>{total ? `${(page - 1) * PER_PAGE + 1}〜${Math.min(page * PER_PAGE, total)}件 / ${total}件` : ""}</span>
-            <Pagination page={page} pageCount={pageCount} makeHref={(p) => makeHref({ page: String(p) })} />
-          </div>
+          <Pagination page={page} pageCount={pageCount} total={total} perPage={PER_PAGE} makeHref={(p) => makeHref({ page: String(p) })} />
         </>
       )}
     </div>
