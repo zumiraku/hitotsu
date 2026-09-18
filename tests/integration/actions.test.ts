@@ -15,7 +15,7 @@ const customerForm = (name: string) => fd({ name, kana: "", type: "CUSTOMER", in
 
 describe("権限の強制（画面ではなく処理側）", () => {
   it("閲覧のみは作成・編集・記録のどれもできない", async () => {
-    await loginAs("yamamoto@example.com");
+    await loginAs("yamamoto");
     expect((await createCustomer(null, customerForm("拒否されるはず")))?.message).toBe(DENIED);
     expect((await createTask(null, fd({ title: "x", projectId: "", assigneeId: "", dueDate: "" })))?.message).toBe(DENIED);
     expect((await createNote(null, fd({ title: "x", category: "MEMO", body: "y", projectId: "", customerId: "", pinned: "" })))?.message).toBe(DENIED);
@@ -24,23 +24,23 @@ describe("権限の強制（画面ではなく処理側）", () => {
   });
 
   it("一般は削除と CSV 取込ができない", async () => {
-    await loginAs("tanaka@example.com");
+    await loginAs("tanaka");
     expect((await deleteCustomer(await customerId("株式会社フジ倉庫")))?.message).toBe(DENIED);
     expect((await deleteProject(await projectId("安全大会 資料作成")))?.message).toBe(DENIED);
     expect((await importRows("customers", [{ name: "x" }])).message).toBe(DENIED);
-    expect((await inviteUser(null, fd({ name: "a", email: "a@example.com", department: "", role: "MEMBER" })))?.message).toBe(DENIED);
+    expect((await inviteUser(null, fd({ name: "a", loginId: "a-test", department: "", role: "MEMBER" })))?.message).toBe(DENIED);
   });
 
   it("マネージャーはユーザー管理ができない", async () => {
-    await loginAs("takahashi@example.com");
-    const tanaka = await db.user.findUniqueOrThrow({ where: { email: "tanaka@example.com" } });
+    await loginAs("takahashi");
+    const tanaka = await db.user.findUniqueOrThrow({ where: { loginId: "tanaka" } });
     expect((await changeRole(tanaka.id, "VIEWER")).message).toBe(DENIED);
   });
 });
 
 describe("顧客", () => {
   it("作成するとコードが採番され、詳細へリダイレクトし、変更履歴に残る", async () => {
-    await loginAs("tanaka@example.com");
+    await loginAs("tanaka");
     await expect(createCustomer(null, customerForm("統合テスト商事"))).rejects.toThrow(RedirectError);
     const c = await db.customer.findFirstOrThrow({ where: { name: "統合テスト商事" } });
     expect(c.code).toMatch(/^C-\d{4}$/);
@@ -49,7 +49,7 @@ describe("顧客", () => {
   });
 
   it("編集すると変わった項目だけ差分が記録される", async () => {
-    await loginAs("tanaka@example.com");
+    await loginAs("tanaka");
     const c = await db.customer.findFirstOrThrow({ where: { name: "統合テスト商事" } });
     await expect(updateCustomer(c.id, null, fd({ ...Object.fromEntries(customerForm("統合テスト商事").entries()), industry: "商社", tel: "03-0000-1111" }))).rejects.toThrow(RedirectError);
     const log = await lastAudit("customer", c.id);
@@ -58,7 +58,7 @@ describe("顧客", () => {
   });
 
   it("案件が残っている顧客は削除できず、なければ論理削除される", async () => {
-    await loginAs("takahashi@example.com");
+    await loginAs("takahashi");
     const withProjects = await customerId("サクラ物産株式会社");
     expect((await deleteCustomer(withProjects))?.message).toContain("案件が");
     const c = await db.customer.findFirstOrThrow({ where: { name: "統合テスト商事" } });
@@ -70,8 +70,8 @@ describe("顧客", () => {
 
 describe("案件・タスク・対応履歴・メモ", () => {
   it("案件の作成・ステータス変更・メンバー変更が履歴に残る", async () => {
-    const me = await loginAs("tanaka@example.com");
-    const suzuki = await db.user.findUniqueOrThrow({ where: { email: "suzuki@example.com" } });
+    const me = await loginAs("tanaka");
+    const suzuki = await db.user.findUniqueOrThrow({ where: { loginId: "suzuki" } });
     const cid = await customerId("ヤマネ建設株式会社");
     await expect(createProject(null, fd({ name: "統合テスト案件", customerId: cid, status: "LEAD", priority: "HIGH", ownerId: me.id, amount: "120万", startDate: "2026-10-01", dueDate: "2026-12-01", summary: "", tags: "テスト", memberIds: [suzuki.id] }))).rejects.toThrow(RedirectError);
     const p = await db.project.findFirstOrThrow({ where: { name: "統合テスト案件" }, include: { members: true } });
@@ -90,7 +90,7 @@ describe("案件・タスク・対応履歴・メモ", () => {
   });
 
   it("タスクの追加と完了、対応履歴の記録が案件の履歴と更新日時に反映される", async () => {
-    await loginAs("suzuki@example.com");
+    await loginAs("suzuki");
     const pid = await projectId("統合テスト案件");
     const before = (await db.project.findUniqueOrThrow({ where: { id: pid } })).updatedAt;
     expect((await createTask(null, fd({ title: "統合テストのタスク", projectId: pid, assigneeId: "", dueDate: "2026-11-01" })))?.ok).toBe(true);
@@ -107,7 +107,7 @@ describe("案件・タスク・対応履歴・メモ", () => {
   });
 
   it("メモの作成とピン留め", async () => {
-    await loginAs("suzuki@example.com");
+    await loginAs("suzuki");
     const pid = await projectId("統合テスト案件");
     await expect(createNote(null, fd({ title: "統合テストのメモ", category: "HANDOVER", body: "本文", projectId: pid, customerId: "", pinned: "" }))).rejects.toThrow(RedirectError);
     const n = await db.note.findFirstOrThrow({ where: { title: "統合テストのメモ" } });
@@ -117,7 +117,7 @@ describe("案件・タスク・対応履歴・メモ", () => {
   });
 
   it("案件の削除は論理削除。紐づくタスク・メモは検索に出なくなる", async () => {
-    await loginAs("takahashi@example.com");
+    await loginAs("takahashi");
     const pid = await projectId("統合テスト案件");
     const before = await searchAll({ words: ["統合テスト"] });
     expect(before.map((g) => g.kind)).toEqual(expect.arrayContaining(["task", "note", "activity"]));
@@ -132,12 +132,13 @@ describe("案件・タスク・対応履歴・メモ", () => {
 
 describe("ユーザー管理", () => {
   it("招待すると仮パスワードが発行され、初回は変更を求められる。自分の管理者権限は外せない", async () => {
-    const me = await loginAs("sato@example.com");
-    const res = await inviteUser(null, fd({ name: "統合 テスト", email: "itest@example.com", department: "総務", role: "MEMBER" }));
+    const me = await loginAs("admin");
+    const res = await inviteUser(null, fd({ name: "統合 テスト", loginId: "ITest.01", department: "総務", role: "MEMBER" }));
     expect(res?.created?.password).toHaveLength(12);
-    const u = await db.user.findUniqueOrThrow({ where: { email: "itest@example.com" } });
+    const u = await db.user.findUniqueOrThrow({ where: { loginId: "itest.01" } });
     expect(u.mustChangePassword).toBe(true);
-    expect((await inviteUser(null, fd({ name: "重複", email: "itest@example.com", department: "", role: "MEMBER" })))?.errors?.email?.[0]).toContain("すでに");
+    expect((await inviteUser(null, fd({ name: "重複", loginId: "itest.01", department: "", role: "MEMBER" })))?.errors?.loginId?.[0]).toContain("すでに");
+    expect((await inviteUser(null, fd({ name: "不正", loginId: "山田太郎", department: "", role: "MEMBER" })))?.errors?.loginId?.[0]).toContain("半角");
     expect((await changeRole(me.id, "MEMBER")).message).toContain("自分自身");
     expect((await changeRole(u.id, "VIEWER")).message).toBeUndefined();
     expect((await db.user.findUniqueOrThrow({ where: { id: u.id } })).role).toBe("VIEWER");
@@ -146,7 +147,7 @@ describe("ユーザー管理", () => {
 
 describe("CSV 取込", () => {
   it("行ごとの検証と、見つからない顧客の自動作成", async () => {
-    await loginAs("takahashi@example.com");
+    await loginAs("takahashi");
     const bad = await importRows("customers", [{ name: "サクラ物産株式会社" }, { name: "" }]);
     expect(bad.ok).toBe(false);
     expect(bad.issues.map((i) => i.row)).toEqual([2, 3]);
@@ -157,7 +158,7 @@ describe("CSV 取込", () => {
     const p = await db.project.findFirstOrThrow({ where: { name: "取込テスト案件" }, include: { customer: true, owner: true } });
     expect(p.customer.name).toBe("取込で作られる商会");
     expect(p.status).toBe("ACTIVE");
-    expect(p.owner?.email).toBe("tanaka@example.com");
+    expect(p.owner?.loginId).toBe("tanaka");
     expect(p.amount).toBe(650000);
     expect(p.dueDate?.toISOString()).toBe("2026-12-24T00:00:00.000Z");
   });

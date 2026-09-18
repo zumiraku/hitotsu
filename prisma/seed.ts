@@ -36,11 +36,11 @@ async function main() {
   const passwordHash = await bcrypt.hash("password", 10);
   const users = await Promise.all(
     [
-      { key: "sato", email: "sato@example.com", name: "佐藤 健太", role: "ADMIN", department: "代表取締役", color: "#1F5F8B", lastLoginAt: day(0, 8, 42) },
-      { key: "takahashi", email: "takahashi@example.com", name: "高橋 美咲", role: "MANAGER", department: "営業部 部長", color: "#7A3E9D", lastLoginAt: day(0, 9, 15) },
-      { key: "tanaka", email: "tanaka@example.com", name: "田中 大輔", role: "MEMBER", department: "営業部", color: "#1F8A4C", lastLoginAt: day(0, 9, 3) },
-      { key: "suzuki", email: "suzuki@example.com", name: "鈴木 あかね", role: "MEMBER", department: "業務推進室", color: "#B7791F", lastLoginAt: day(-1, 17, 20) },
-      { key: "yamamoto", email: "yamamoto@example.com", name: "山本 拓也", role: "VIEWER", department: "経理部", color: "#66727F", lastLoginAt: day(-3, 10, 0) },
+      { key: "sato", loginId: "admin", name: "佐藤 健太", role: "ADMIN", department: "代表取締役", color: "#1F5F8B", lastLoginAt: day(0, 8, 42) },
+      { key: "takahashi", loginId: "takahashi", name: "高橋 美咲", role: "MANAGER", department: "営業部 部長", color: "#7A3E9D", lastLoginAt: day(0, 9, 15) },
+      { key: "tanaka", loginId: "tanaka", name: "田中 大輔", role: "MEMBER", department: "営業部", color: "#1F8A4C", lastLoginAt: day(0, 9, 3) },
+      { key: "suzuki", loginId: "suzuki", name: "鈴木 あかね", role: "MEMBER", department: "業務推進室", color: "#B7791F", lastLoginAt: day(-1, 17, 20) },
+      { key: "yamamoto", loginId: "yamamoto", name: "山本 拓也", role: "VIEWER", department: "経理部", color: "#66727F", lastLoginAt: day(-3, 10, 0) },
     ].map(async ({ key, role, ...u }) => [key, await db.user.create({ data: { ...u, role: role as "ADMIN", passwordHash } })] as const),
   ).then(Object.fromEntries);
 

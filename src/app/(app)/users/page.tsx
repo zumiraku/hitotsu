@@ -6,7 +6,9 @@ import { db } from "@/lib/db";
 import { fmtDateTime } from "@/lib/format";
 import { ROLE_LABEL } from "@/lib/labels";
 import { Forbidden } from "@/components/forbidden";
+import { verifyPassword } from "@/lib/auth";
 import { PERM_LABEL, PERM_ORDER, ROLE_DESC, ROLE_ORDER, ROLE_PERMS, can } from "@/lib/permissions";
+import { SAMPLE_LOGIN_IDS, SAMPLE_PASSWORD } from "@/lib/sample-accounts";
 
 export const metadata = { title: "ユーザー・権限" };
 export const dynamic = "force-dynamic";
@@ -15,11 +17,17 @@ export default async function UsersPage() {
   const me = await currentUser();
   if (!can(me, "users")) return <Forbidden title="ユーザー・権限" need="管理者" />;
 
-  const sampleAccounts = process.env.NODE_ENV === "production" ? await db.user.count({ where: { email: { endsWith: "@example.com" }, isActive: true } }) : 0;
   const users = await db.user.findMany({
     include: { _count: { select: { ownedProjects: { where: { status: "ACTIVE", deletedAt: null } } } } },
     orderBy: [{ isActive: "desc" }, { role: "asc" }, { name: "asc" }],
   });
+  // 動作確認用アカウントが初期パスワードのまま残っていたら本番では注意を出す
+  let sampleAccounts = 0;
+  if (process.env.NODE_ENV === "production") {
+    for (const u of users.filter((x) => x.isActive && SAMPLE_LOGIN_IDS.includes(x.loginId))) {
+      if (await verifyPassword(SAMPLE_PASSWORD, u.passwordHash)) sampleAccounts++;
+    }
+  }
 
   return (
     <div>
@@ -27,14 +35,14 @@ export default async function UsersPage() {
         <InviteButton />
       </PageHeader>
 
-      {sampleAccounts ? <p className="msg-warn mb-3">サンプルアカウント（@example.com）が {sampleAccounts} 件有効なままです。本番運用では無効化してください。</p> : null}
+      {sampleAccounts ? <p className="msg-warn mb-3">初期パスワードのままの動作確認用アカウントが {sampleAccounts} 件あります。パスワードを変更するか無効化してください。</p> : null}
       <p className="mb-2 text-[12px] text-muted">※ ロールを変更すると、対象ユーザーの次回画面表示から反映されます。</p>
       <div className="overflow-x-auto">
         <table className="tbl">
           <thead>
             <tr>
               <th className="th">氏名</th>
-              <th className="th">メールアドレス</th>
+              <th className="th">ログインID</th>
               <th className="th">所属</th>
               <th className="th">ロール</th>
               <th className="th">状態</th>
@@ -51,7 +59,7 @@ export default async function UsersPage() {
                 user={{
                   id: u.id,
                   name: u.name,
-                  email: u.email,
+                  loginId: u.loginId,
                   department: u.department,
                   role: u.role,
                   isActive: u.isActive,

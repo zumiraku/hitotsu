@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { SAMPLE_LOGIN_IDS } from "@/lib/sample-accounts";
 
 export const metadata = { title: "ログイン" };
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await sessionUser()) redirect("/");
 
   // 開発環境ではサンプルアカウントを案内する
-  const samples = process.env.NODE_ENV !== "production" ? await db.user.findMany({ where: { isActive: true, email: { endsWith: "@example.com" } }, select: { email: true, name: true, role: true }, orderBy: { role: "asc" } }) : [];
+  const samples = process.env.NODE_ENV !== "production" ? await db.user.findMany({ where: { isActive: true, loginId: { in: SAMPLE_LOGIN_IDS } }, select: { loginId: true, name: true, role: true }, orderBy: { role: "asc" } }) : [];
 
   return (
     <main className="flex min-h-full flex-col">

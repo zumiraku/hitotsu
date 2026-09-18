@@ -5,7 +5,7 @@ import { login } from "@/actions/auth";
 import { Field, inputClass } from "@/components/ui/field";
 import { ROLE_LABEL } from "@/lib/labels";
 
-type Sample = { email: string; name: string; role: keyof typeof ROLE_LABEL };
+type Sample = { loginId: string; name: string; role: keyof typeof ROLE_LABEL };
 
 export function LoginForm({ next, expired, samples }: { next: string; expired: boolean; samples: Sample[] }) {
   const [state, action, pending] = useActionState(login, null);
@@ -17,8 +17,8 @@ export function LoginForm({ next, expired, samples }: { next: string; expired: b
         {expired && !state ? <p className="msg-warn mb-3">セッションの有効期限が切れました。もう一度ログインしてください。</p> : null}
         {state?.message ? <p role="alert" className="msg-bad mb-3">{state.message}</p> : null}
         <div className="form">
-          <Field label="メールアドレス" htmlFor="email">
-            <input id="email" name="email" type="email" autoComplete="username" defaultValue={state?.values?.email ?? ""} className={inputClass} autoFocus required />
+          <Field label="ログインID" htmlFor="loginId">
+            <input id="loginId" name="loginId" type="text" autoComplete="username" autoCapitalize="none" defaultValue={state?.values?.loginId ?? ""} className={inputClass} autoFocus required />
           </Field>
           <Field label="パスワード" htmlFor="password">
             <input id="password" name="password" type="password" autoComplete="current-password" className={inputClass} required />
@@ -34,8 +34,8 @@ export function LoginForm({ next, expired, samples }: { next: string; expired: b
           <div className="mb-0.5 font-bold">開発用アカウント（パスワードはすべて「password」）</div>
           <ul>
             {samples.map((s) => (
-              <li key={s.email}>
-                {s.name}（{ROLE_LABEL[s.role]}）：{s.email}
+              <li key={s.loginId}>
+                {s.loginId}：{s.name}（{ROLE_LABEL[s.role]}）
               </li>
             ))}
           </ul>

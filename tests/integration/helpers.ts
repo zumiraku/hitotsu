@@ -9,9 +9,9 @@ export const fd = (o: Record<string, string | string[]>) => {
 };
 
 // seed のアカウントでログインした状態にする
-export async function loginAs(email: string) {
+export async function loginAs(loginId: string) {
   cookieStore.clear();
-  const user = await db.user.findUniqueOrThrow({ where: { email } });
+  const user = await db.user.findUniqueOrThrow({ where: { loginId } });
   await createSession(user.id);
   return user;
 }

@@ -10,7 +10,7 @@ import { ROLE_ORDER } from "@/lib/permissions";
 export type UserRowData = {
   id: string;
   name: string;
-  email: string;
+  loginId: string;
   department: string | null;
   role: Role;
   isActive: boolean;
@@ -82,7 +82,7 @@ export function UserRow({ user, isMe }: { user: UserRowData; isMe: boolean }) {
               {user.name}
               {isMe ? <span className="ml-1 text-[11px] text-muted">（自分）</span> : null}
             </td>
-            <td className="td break-all">{user.email}</td>
+            <td className="td">{user.loginId}</td>
             <td className="td whitespace-nowrap">{user.department || <span className="text-muted">－</span>}</td>
           </>
         )}
